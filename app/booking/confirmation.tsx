@@ -1,0 +1,513 @@
+import { useAuth } from '@/contexts/AuthContext';
+import { useBooking } from '@/contexts/BookingContext';
+import { Location, Vehicle } from '@/types';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import React, { useState } from 'react';
+import {
+  Alert,
+  SafeAreaView,
+  ScrollView,
+  StyleSheet,
+  Text,
+  TextInput,
+  TouchableOpacity,
+  View,
+} from 'react-native';
+import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+
+export default function ConfirmationScreen() {
+  const router = useRouter();
+  const params = useLocalSearchParams();
+  const { createBooking } = useBooking();
+  const { isLoggedIn, user } = useAuth();
+  const [pickupInstructions, setPickupInstructions] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const startLocation: Location = JSON.parse(params.startLocation as string);
+  const endLocation: Location = JSON.parse(params.endLocation as string);
+  const vehicle: Vehicle = JSON.parse(params.vehicle as string);
+  const fare = parseInt(params.fare as string);
+  // pickupOption, date, time
+  const pickupOption = params.pickupOption as 'now' | 'schedule';
+  const pickupDate = pickupOption === 'schedule' ? new Date(params.pickupDate as string) : null;
+  const pickupTime = pickupOption === 'schedule' ? new Date(params.pickupTime as string) : null;
+
+  const handleConfirmBooking = async () => {
+    if (!isLoggedIn) {
+      Alert.alert(
+        'Authentication Required',
+        'You need to login to book a ride, or continue as guest',
+        [
+          { text: 'Cancel', style: 'cancel' },
+          { text: 'Login', onPress: () => router.push('/auth/login') },
+          { text: 'Guest Booking', onPress: () => handleGuestBooking() },
+        ]
+      );
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Prepare API payload
+      const now = new Date();
+      const travelDate =
+        pickupOption === 'now'
+          ? now.toISOString().slice(0, 10)
+          : pickupDate?.toISOString().slice(0, 10);
+      const travelTime =
+        pickupOption === 'now'
+          ? now.toTimeString().slice(0, 5)
+          : pickupTime
+          ? pickupTime.toTimeString().slice(0, 5)
+          : '';
+
+      // const payload = {
+      //   customer_id: user.customer_id,
+      //   start_point: startLocation.name,
+      //   end_point: endLocation.name,
+      //   vehicle_type: vehicle.type,
+      //   total_amount: fare.toString(),
+      //   date_of_travel: travelDate,
+      //   pickup_time: travelTime,
+      // };
+      // console.log("Booking payload:", payload);
+      // const response = await apiPost('/api/book_ride/', payload);
+      // console.log("Booking response:", response.data);
+      const success = await createBooking(
+        user,
+        startLocation,
+        endLocation,
+        vehicle,
+        fare,
+        pickupInstructions || undefined,
+        pickupOption || undefined,
+        pickupDate || undefined,
+        pickupTime || undefined,
+    );
+      if (success) {
+        Alert.alert(
+          'Booking Confirmed!',
+          'Your ride has been booked successfully. Driver details will be updated soon.',
+          [
+            { text: 'OK', onPress: () => router.push('/tracking') }
+          ]
+        );
+      } else {
+        Alert.alert('Error', success.data.message || 'Failed to book ride. Please try again.');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Something went wrong. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleGuestBooking = () => {
+    router.push({
+      pathname: '/booking/guest',
+      params: {
+        startLocation: JSON.stringify(startLocation),
+        endLocation: JSON.stringify(endLocation),
+        vehicle: JSON.stringify(vehicle),
+        fare: fare.toString(),
+        pickupInstructions,
+      },
+    });
+  };
+
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <TouchableOpacity
+          style={styles.backButton}
+          onPress={() => router.back()}
+        >
+          <MaterialCommunityIcons name="arrow-left" size={24} color="#1F2937" />
+        </TouchableOpacity>
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>Confirm Booking</Text>
+          <Text style={styles.headerSubtitle}>Review your trip details</Text>
+        </View>
+      </View>
+
+      <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Trip Details</Text>
+          
+          <View style={styles.routeContainer}>
+            <View style={styles.routeItem}>
+              <MaterialCommunityIcons name="map-marker" size={20} color="#10B981" />
+              <View style={styles.routeText}>
+                <Text style={styles.locationName}>{startLocation.name}</Text>
+                <Text style={styles.locationAddress}>{startLocation.address}</Text>
+              </View>
+            </View>
+            
+            <View style={styles.routeLine} />
+            
+            <View style={styles.routeItem}>
+              <MaterialCommunityIcons name="map-marker" size={20} color="#EF4444" />
+              <View style={styles.routeText}>
+                <Text style={styles.locationName}>{endLocation.name}</Text>
+                <Text style={styles.locationAddress}>{endLocation.address}</Text>
+              </View>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Vehicle Details</Text>
+          <View style={styles.vehicleContainer}>
+            <MaterialCommunityIcons name="car" size={20} color="#6B7280" />
+            <View style={styles.vehicleInfo}>
+              <Text style={styles.vehicleName}>{vehicle.type}</Text>
+              <Text style={styles.vehicleType}>{vehicle.capacity} seats</Text>
+            </View>
+            <Text style={styles.vehiclePrice}>₹{vehicle.pricePerKm}/km</Text>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Pickup Details</Text>
+          <View style={{
+            backgroundColor: '#F9FAFB',
+            borderRadius: 16,
+            padding: 18,
+            flexDirection: 'row',
+            alignItems: 'center',
+            marginTop: 12,
+            marginBottom: 8,
+            shadowColor: '#000',
+            shadowOffset: { width: 0, height: 2 },
+            shadowOpacity: 0.08,
+            shadowRadius: 8,
+            elevation: 2,
+          }}>
+            <MaterialCommunityIcons name={pickupOption === 'now' ? 'clock-outline' : 'calendar-clock'} size={32} color={pickupOption === 'now' ? '#10B981' : '#3B82F6'} style={{ marginRight: 18 }} />
+            <View style={{ flex: 1 }}>
+              <Text style={{ fontSize: 16, fontWeight: '600', color: '#1F2937', marginBottom: 2 }}>
+                {pickupOption === 'now' ? 'Pickup Now' : 'Scheduled Pickup'}
+              </Text>
+              {pickupOption === 'now' ? (
+                <Text style={{ fontSize: 14, color: '#6B7280' }}>Your driver will arrive as soon as possible.</Text>
+              ) : (
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 2 }}>
+                  <MaterialCommunityIcons name="calendar" size={18} color="#3B82F6" style={{ marginRight: 6 }} />
+                  <Text style={{ fontSize: 14, color: '#374151', marginRight: 16 }}>
+                    {pickupDate?.toLocaleDateString()}
+                  </Text>
+                  <MaterialCommunityIcons name="clock" size={18} color="#10B981" style={{ marginRight: 6 }} />
+                  <Text style={{ fontSize: 14, color: '#374151' }}>
+                    {pickupTime?.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                  </Text>
+                </View>
+              )}
+            </View>
+            <View style={{ alignItems: 'flex-end' }}>
+              <MaterialCommunityIcons name="check-circle" size={28} color="#10B981" />
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Fare Breakdown</Text>
+          <View style={styles.fareContainer}>
+            <View style={styles.fareItem}>
+              <Text style={styles.fareLabel}>Base Fare</Text>
+              <Text style={styles.fareValue}>₹0</Text>
+            </View>
+            <View style={styles.fareItem}>
+              <Text style={styles.fareLabel}>Distance Charges</Text>
+              <Text style={styles.fareValue}>₹{Math.max(0, Math.round((fare - 300 - 400) || 0))}</Text>
+            </View>
+            <View style={styles.fareItem}>
+              <Text style={styles.fareLabel}>Driver Fee</Text>
+              <Text style={styles.fareValue}>₹300</Text>
+            </View>
+            <View style={styles.fareItem}>
+              <Text style={styles.fareLabel}>Toll (est.)</Text>
+              <Text style={styles.fareValue}>₹{fare > 10 ? 400 : 0}</Text>
+            </View>
+            <View style={[styles.fareItem, styles.totalFare]}>
+              <Text style={styles.totalLabel}>Total</Text>
+              <Text style={styles.totalValue}>₹{fare}</Text>
+            </View>
+          </View>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Pickup Instructions</Text>
+          <View style={styles.instructionsContainer}>
+            <MaterialCommunityIcons name="message-text" size={20} color="#6B7280" style={styles.instructionsIcon} />
+            <TextInput
+              style={styles.instructionsInput}
+              placeholder="Add pickup instructions (optional)"
+              placeholderTextColor="#9CA3AF"
+              value={pickupInstructions}
+              onChangeText={setPickupInstructions}
+              multiline
+              maxLength={200}
+              textAlignVertical="top"
+            />
+          </View>
+          <Text style={styles.instructionsHint}>
+            e.g., "Near the main gate", "Blue building", etc.
+          </Text>
+        </View>
+
+        {/* <View style={styles.estimatedTime}>
+          <MaterialCommunityIcons name="clock-outline" size={20} color="#10B981" />
+          <Text style={styles.estimatedTimeText}>Estimated pickup: 2-5 minutes</Text>
+        </View> */}
+      </ScrollView>
+
+      <View style={styles.footer}>
+        <TouchableOpacity
+          style={styles.confirmButton}
+          onPress={handleConfirmBooking}
+          disabled={loading}
+        >
+          <MaterialCommunityIcons name="currency-inr" size={20} color="#ffffff" />
+          <Text style={styles.confirmButtonText}>
+            {loading ? 'Booking...' : `Confirm Ride - ₹${fare}`}
+          </Text>
+        </TouchableOpacity>
+        
+        {!isLoggedIn && (
+          <TouchableOpacity
+            style={styles.guestButton}
+            onPress={handleGuestBooking}
+          >
+            <Text style={styles.guestButtonText}>Continue as Guest</Text>
+          </TouchableOpacity>
+        )}
+      </View>
+    </SafeAreaView>
+  );
+}
+
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#ffffff',
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: '#E5E7EB',
+  },
+  backButton: {
+    marginRight: 16,
+  },
+  headerContent: {
+    flex: 1,
+  },
+  headerTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  headerSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  content: {
+    flex: 1,
+    paddingHorizontal: 24,
+  },
+  section: {
+    marginTop: 24,
+  },
+  sectionTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1F2937',
+    marginBottom: 12,
+  },
+  routeContainer: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+  },
+  routeItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  routeLine: {
+    width: 2,
+    height: 20,
+    backgroundColor: '#D1D5DB',
+    marginLeft: 10,
+    marginVertical: 8,
+  },
+  routeText: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  locationName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  locationAddress: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  vehicleContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+  },
+  vehicleInfo: {
+    marginLeft: 12,
+    flex: 1,
+  },
+  vehicleName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  vehicleType: {
+    fontSize: 14,
+    color: '#6B7280',
+    marginTop: 2,
+  },
+  vehiclePrice: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#10B981',
+  },
+  fareContainer: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+  },
+  fareItem: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingVertical: 8,
+  },
+  fareLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  fareValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1F2937',
+  },
+  totalFare: {
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+    marginTop: 8,
+    paddingTop: 16,
+  },
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#1F2937',
+  },
+  totalValue: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#10B981',
+  },
+  instructionsContainer: {
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
+  },
+  instructionsIcon: {
+    marginTop: 2,
+  },
+  instructionsInput: {
+    flex: 1,
+    marginLeft: 12,
+    fontSize: 14,
+    color: '#1F2937',
+    minHeight: 40,
+    textAlignVertical: 'top',
+  },
+  instructionsHint: {
+    fontSize: 12,
+    color: '#9CA3AF',
+    marginTop: 8,
+    fontStyle: 'italic',
+  },
+  estimatedTime: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#ECFDF5',
+    borderRadius: 12,
+    padding: 16,
+    marginTop: 24,
+    marginBottom: 16,
+  },
+  estimatedTimeText: {
+    marginLeft: 12,
+    fontSize: 16,
+    fontWeight: '500',
+    color: '#10B981',
+  },
+  footer: {
+    paddingHorizontal: 24,
+    paddingVertical: 20,
+  },
+  confirmButton: {
+    flexDirection: 'row',
+    backgroundColor: '#10B981',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  confirmButtonText: {
+    color: '#ffffff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 8,
+  },
+  guestButton: {
+    alignItems: 'center',
+    marginTop: 12,
+  },
+  guestButtonText: {
+    fontSize: 14,
+    color: '#3B82F6',
+    fontWeight: '500',
+  },
+  pickupContainer: {
+    marginTop: 12,
+  },
+  pickupLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  pickupValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1F2937',
+  },
+  scheduleContainer: {
+    marginTop: 12,
+  },
+  scheduleLabel: {
+    fontSize: 14,
+    color: '#6B7280',
+  },
+  scheduleValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1F2937',
+  },
+});
