@@ -46,12 +46,12 @@ export default function ProfileScreen() {
   const handleSupportCall = () => {
     Alert.alert(
       'Call Support',
-      'Call our support team at +91 1800-123-4567?',
+      'Call our support team at +91 85087 06396?',
       [
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Call', 
-          onPress: () => Linking.openURL('tel:+911800123456') 
+          onPress: () => Linking.openURL('tel:+918508706396') 
         },
       ]
     );
@@ -123,12 +123,13 @@ export default function ProfileScreen() {
           icon: <MaterialCommunityIcons name="message-text" size={20} color="#6B7280" />,
           label: 'Send Message',
           value: 'Contact support',
-          onPress: () => setShowSupport(true),
+          onPress: () => Alert.alert('Message', 'Message will be available soon!'),
+          // onPress: () => setShowSupport(true),
         },
         {
           icon: <MaterialCommunityIcons name="phone" size={20} color="#6B7280" />,
           label: 'Call Support',
-          value: '+91 1800-123-4567',
+          value: '+91 85087 06396',
           onPress: handleSupportCall,
         },
       ],
@@ -276,7 +277,7 @@ export default function ProfileScreen() {
         ))}
 
         <View style={styles.appInfo}>
-          <Text style={styles.appTitle}>Namma Taxi</Text>
+          <Text style={styles.appTitle}>NANO Taxi</Text>
           <Text style={styles.appVersion}>Version 1.0.0</Text>
           <Text style={styles.appDescription}>
             Your reliable ride booking companion

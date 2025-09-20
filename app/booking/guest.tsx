@@ -1,20 +1,20 @@
+import { apiPost } from '@/services/apiClient';
+import { GuestBooking, Location, Vehicle } from '@/types';
+import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  View,
-  Text,
-  TextInput,
-  TouchableOpacity,
-  StyleSheet,
-  SafeAreaView,
-  ScrollView,
-  Alert,
-  KeyboardAvoidingView,
-  Platform,
+    Alert,
+    KeyboardAvoidingView,
+    Platform,
+    SafeAreaView,
+    ScrollView,
+    StyleSheet,
+    Text,
+    TextInput,
+    TouchableOpacity,
+    View,
 } from 'react-native';
-import { useRouter, useLocalSearchParams } from 'expo-router';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { Location, Vehicle, GuestBooking } from '@/types';
-import { apiPost } from '@/services/apiClient';
 
 export default function GuestBookingScreen() {
   const router = useRouter();
@@ -73,9 +73,9 @@ export default function GuestBookingScreen() {
           fare,
           pickupInstructions,
         });
-        console.log('Guest booking created successfully');
+        // console.log('Guest booking created successfully');
       } catch (error) {
-        console.log('Guest booking API failed, proceeding with mock booking');
+        // console.log('Guest booking API failed, proceeding with mock booking');
       }
 
       Alert.alert(

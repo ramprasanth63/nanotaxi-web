@@ -23,14 +23,31 @@ export default function ConfirmationScreen() {
   const [pickupInstructions, setPickupInstructions] = useState('');
   const [loading, setLoading] = useState(false);
 
-  const startLocation: Location = JSON.parse(params.startLocation as string);
-  const endLocation: Location = JSON.parse(params.endLocation as string);
-  const vehicle: Vehicle = JSON.parse(params.vehicle as string);
-  const fare = parseInt(params.fare as string);
+  // Add this helper function at the top of your component
+  const safeParseJSON = (param: any) => {
+    if (typeof param === 'string') {
+      try {
+        return JSON.parse(param);
+      } catch (error) {
+        console.error('JSON parse error:', error);
+        return null;
+      }
+    }
+    return param; // Already an object
+  };
+
+  // Replace your existing parameter parsing with:
+  const startLocation: Location = safeParseJSON(params.startLocation);
+  const endLocation: Location = safeParseJSON(params.endLocation);
+  const vehicle: Vehicle = safeParseJSON(params.vehicle);
+  const fare = typeof params.fare === 'string' ? parseInt(params.fare) : params.fare;
   // pickupOption, date, time
   const pickupOption = params.pickupOption as 'now' | 'schedule';
-  const pickupDate = pickupOption === 'schedule' ? new Date(params.pickupDate as string) : null;
-  const pickupTime = pickupOption === 'schedule' ? new Date(params.pickupTime as string) : null;
+  const pickupDate = pickupOption === 'schedule' && params.pickupDate ? 
+    (typeof params.pickupDate === 'string' ? new Date(params.pickupDate) : params.pickupDate) : null;
+  const pickupTime = pickupOption === 'schedule' && params.pickupTime ? 
+    (typeof params.pickupTime === 'string' ? new Date(params.pickupTime) : params.pickupTime) : null;
+  const roundTrip = params.roundTrip === 'true' || params.roundTrip === true;
 
   const handleConfirmBooking = async () => {
     if (!isLoggedIn) {
@@ -70,9 +87,9 @@ export default function ConfirmationScreen() {
       //   date_of_travel: travelDate,
       //   pickup_time: travelTime,
       // };
-      // console.log("Booking payload:", payload);
+      // // console.log("Booking payload:", payload);
       // const response = await apiPost('/api/book_ride/', payload);
-      // console.log("Booking response:", response.data);
+      // // console.log("Booking response:", response.data);
       const success = await createBooking(
         user,
         startLocation,
@@ -83,15 +100,17 @@ export default function ConfirmationScreen() {
         pickupOption || undefined,
         pickupDate || undefined,
         pickupTime || undefined,
+        roundTrip
     );
       if (success) {
-        Alert.alert(
-          'Booking Confirmed!',
-          'Your ride has been booked successfully. Driver details will be updated soon.',
-          [
-            { text: 'OK', onPress: () => router.push('/tracking') }
-          ]
-        );
+        // Alert.alert(
+        //   'Booking Confirmed!',
+        //   'Your ride has been booked successfully. Driver details will be updated soon.',
+        //   [
+        //     { text: 'OK', onPress: () => router.replace('/tracking') }
+        //   ]
+        // );
+      router.replace('/tracking')
       } else {
         Alert.alert('Error', success.data.message || 'Failed to book ride. Please try again.');
       }
@@ -135,24 +154,56 @@ export default function ConfirmationScreen() {
           <Text style={styles.sectionTitle}>Trip Details</Text>
           
           <View style={styles.routeContainer}>
-            <View style={styles.routeItem}>
-              <MaterialCommunityIcons name="map-marker" size={20} color="#10B981" />
-              <View style={styles.routeText}>
-                <Text style={styles.locationName}>{startLocation.name}</Text>
-                <Text style={styles.locationAddress}>{startLocation.address}</Text>
-              </View>
-            </View>
-            
-            <View style={styles.routeLine} />
-            
-            <View style={styles.routeItem}>
-              <MaterialCommunityIcons name="map-marker" size={20} color="#EF4444" />
-              <View style={styles.routeText}>
-                <Text style={styles.locationName}>{endLocation.name}</Text>
-                <Text style={styles.locationAddress}>{endLocation.address}</Text>
-              </View>
-            </View>
+            {!roundTrip ? (
+              // One-way trip UI
+              <>
+                <View style={styles.routeItem}>
+                  <MaterialCommunityIcons name="map-marker" size={20} color="#10B981" />
+                  <View style={styles.routeText}>
+                    <Text style={styles.locationName}>{startLocation?.name}</Text>
+                    <Text style={styles.locationAddress}>{startLocation?.address}</Text>
+                  </View>
+                </View>
+                <View style={styles.routeLine} />
+                <View style={styles.routeItem}>
+                  <MaterialCommunityIcons name="map-marker" size={20} color="#EF4444" />
+                  <View style={styles.routeText}>
+                    <Text style={styles.locationName}>{endLocation?.name}</Text>
+                    <Text style={styles.locationAddress}>{endLocation?.address}</Text>
+                  </View>
+                </View>
+              </>
+            ) : (
+              // Round trip UI (From → To → From)
+              <>
+                <View style={styles.routeItem}>
+                  <MaterialCommunityIcons name="map-marker" size={20} color="#10B981" />
+                  <View style={styles.routeText}>
+                    <Text style={styles.locationName}>{startLocation?.name}</Text>
+                    <Text style={styles.locationAddress}>{startLocation?.address}</Text>
+                  </View>
+                </View>
+                <View style={styles.routeLine} />
+                <View style={styles.routeItem}>
+                  <MaterialCommunityIcons name="map-marker" size={20} color="#EF4444" />
+                  <View style={styles.routeText}>
+                    <Text style={styles.locationName}>{endLocation?.name}</Text>
+                    <Text style={styles.locationAddress}>{endLocation?.address}</Text>
+                  </View>
+                </View>
+                <View style={styles.routeLine} />
+                <View style={styles.routeItem}>
+                  <MaterialCommunityIcons name="map-marker" size={20} color="#10B981" />
+                  <View style={styles.routeText}>
+                    <Text style={styles.locationName}>{startLocation?.name}</Text>
+                    <Text style={styles.locationAddress}>Return destination</Text>
+                  </View>
+                </View>
+              </>
+            )}
           </View>
+
+
         </View>
 
         <View style={styles.section}>
@@ -160,10 +211,10 @@ export default function ConfirmationScreen() {
           <View style={styles.vehicleContainer}>
             <MaterialCommunityIcons name="car" size={20} color="#6B7280" />
             <View style={styles.vehicleInfo}>
-              <Text style={styles.vehicleName}>{vehicle.type}</Text>
-              <Text style={styles.vehicleType}>{vehicle.capacity} seats</Text>
+              <Text style={styles.vehicleName}>{vehicle?.type}</Text>
+              <Text style={styles.vehicleType}>{vehicle?.capacity} seats</Text>
             </View>
-            <Text style={styles.vehiclePrice}>₹{vehicle.pricePerKm}/km</Text>
+            <Text style={styles.vehiclePrice}>₹{vehicle?.pricePerKm}/km</Text>
           </View>
         </View>
 
@@ -209,7 +260,7 @@ export default function ConfirmationScreen() {
           </View>
         </View>
 
-        <View style={styles.section}>
+        {/* <View style={styles.section}>
           <Text style={styles.sectionTitle}>Fare Breakdown</Text>
           <View style={styles.fareContainer}>
             <View style={styles.fareItem}>
@@ -233,7 +284,7 @@ export default function ConfirmationScreen() {
               <Text style={styles.totalValue}>₹{fare}</Text>
             </View>
           </View>
-        </View>
+        </View> */}
 
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Pickup Instructions</Text>
@@ -253,6 +304,32 @@ export default function ConfirmationScreen() {
           <Text style={styles.instructionsHint}>
             e.g., "Near the main gate", "Blue building", etc.
           </Text>
+        </View>
+
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>Total Fare</Text>
+          <View
+            style={{
+              backgroundColor: '#ECFDF5',
+              borderRadius: 16,
+              padding: 24,
+              alignItems: 'center',
+              marginTop: 12,
+              marginBottom: 8,
+              shadowColor: '#10B981',
+              shadowOffset: { width: 0, height: 2 },
+              shadowOpacity: 0.08,
+              shadowRadius: 8,
+              elevation: 2,
+            }}
+          >
+            <Text style={{ fontSize: 32, fontWeight: 'bold', color: '#10B981', marginTop: 8 }}>
+              ₹{fare}
+            </Text>
+            <Text style={{ color: '#6B7280', fontSize: 14, marginTop: 6 }}>
+              Price is inclusive of GST and exclusive of toll.
+            </Text>
+          </View>
         </View>
 
         {/* <View style={styles.estimatedTime}>

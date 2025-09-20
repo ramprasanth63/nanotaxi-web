@@ -87,9 +87,9 @@ android {
     buildToolsVersion rootProject.ext.buildToolsVersion
     compileSdk rootProject.ext.compileSdkVersion
 
-    namespace 'com.gokulrajalp.nanosuperapp'
+    namespace 'com.gokulrajalp.NanoTaxi'
     defaultConfig {
-        applicationId 'com.gokulrajalp.nanosuperapp'
+        applicationId 'com.gokulrajalp.NanoTaxi'
         minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1

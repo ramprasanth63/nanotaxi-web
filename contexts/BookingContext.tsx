@@ -8,7 +8,19 @@ interface BookingContextType {
   currentBooking: Booking | null;
   confirmedBookings: Booking[];
   bookingHistory: Booking[];
-  createBooking: (startLocation: Location, endLocation: Location, vehicle: Vehicle, pickupInstructions?: string) => Promise<boolean>;
+  createBooking: (
+    user: any,
+    startLocation: Location,
+    endLocation: Location,
+    vehicle: Vehicle,
+    fare: number,
+    pickupInstructions?: string,
+    pickupOption?: 'now' | 'schedule',
+    pickupDate?: Date | null,
+    pickupTime?: Date | null,
+    roundTrip?: boolean
+  ) => Promise<boolean>;
+  calculateFare: (start: Location, end: Location, vehicle: Vehicle) => number;
   updatePickupInstructions: (bookingId: string, instructions: string) => Promise<boolean>;
   rateBooking: (bookingId: string, rating: number, feedback: string) => Promise<boolean>;
   fetchConfirmedBookings: () => Promise<void>;
@@ -24,7 +36,7 @@ export function BookingProvider({ children }: { children: React.ReactNode }) {
   const [bookingHistory, setBookingHistory] = useState<Booking[]>([]);
 const { isLoggedIn, user } = useAuth();
   const createBooking = async (
-    user,
+    user: any,
     startLocation: Location,
     endLocation: Location,
     vehicle: Vehicle,
@@ -33,6 +45,7 @@ const { isLoggedIn, user } = useAuth();
     pickupOption?: 'now' | 'schedule',
     pickupDate?: Date | null,
     pickupTime?: Date | null,
+    roundTrip?: boolean
   ): Promise<boolean> => {
     try {
       // const bookingData = {
@@ -50,18 +63,18 @@ const { isLoggedIn, user } = useAuth();
       // Use the specified API endpoint for booking confirmation
 
       // date format: YYYY-MM-DD
-      const formatDate = (date: Date | null | undefined): string | null => {
-        if (!date) return null;
-        const year = date.getFullYear();
-        const month = String(date.getMonth() + 1).padStart(2, '0');
-        const day = String(date.getDate()).padStart(2, '0');
+      const formatDate = (date: Date | null | undefined): string => {
+        const d = date || new Date();
+        const year = d.getFullYear();
+        const month = String(d.getMonth() + 1).padStart(2, '0');
+        const day = String(d.getDate()).padStart(2, '0');
         return `${year}-${month}-${day}`;
       };
 
-      const formatTime = (date: Date | null | undefined): string | null => {
-        if (!date) return null;
-        const hours = String(date.getHours()).padStart(2, '0');
-        const minutes = String(date.getMinutes()).padStart(2, '0');
+      const formatTime = (date: Date | null | undefined): string => {
+        const d = date || new Date();
+        const hours = String(d.getHours()).padStart(2, '0');
+        const minutes = String(d.getMinutes()).padStart(2, '0');
         return `${hours}:${minutes}`;
       };
 
@@ -73,8 +86,9 @@ const { isLoggedIn, user } = useAuth();
         total_amount: fare.toString(),
         date_of_travel: formatDate(pickupDate),
         pickup_time: formatTime(pickupTime),
+        ride_instructions: pickupInstructions || '',
       };
-      console.log("Booking payload:", payload);
+      // console.log("Booking payload:", payload);
 
       const response = await apiPost('/api/book_ride/', payload);
       if (response.status === 201 && response.data.status === "success") {
@@ -86,10 +100,11 @@ const { isLoggedIn, user } = useAuth();
           pickupInstructions,
           pickupOption,
           pickupDate,
-          pickupTime
+          pickupTime,
+          roundTrip
         }
         setCurrentBooking(bookingdata);
-        console.log('Booking created successfully:', response.data);
+        // console.log('Booking created successfully:', response.data);
       }
 
       // Create mock booking for demo
@@ -120,7 +135,7 @@ const { isLoggedIn, user } = useAuth();
       return true;
     } catch (error) {
       console.error('Create booking error:', error);
-      console.log('API booking failed, creating mock booking for demo');
+      // console.log('API booking failed, creating mock booking for demo');
       
       // Create mock booking even if API fails (for demo purposes)
       // const mockBooking: Booking = {
@@ -225,7 +240,7 @@ const { isLoggedIn, user } = useAuth();
   const fetchConfirmedBookings = async (): Promise<void> => {
     try {
       const response = await apiGet(`/api/list_rides_by_customer/${user.customer_id}`);
-      console.log("Confirmed bookings response:", response.data.rides);
+      // console.log("Confirmed bookings response:", response.data.rides);
       setConfirmedBookings(response.data.rides);
     } catch (error) {
       console.error('Fetch confirmed bookings error:', error);
@@ -236,8 +251,8 @@ const { isLoggedIn, user } = useAuth();
 
   const fetchBookingHistory = async (): Promise<void> => {
     try {
-      const response = await apiGet('/api/bookings/history');
-      setBookingHistory(response.data);
+      const response = await apiGet(`/api/list_closed_rides_by_customer/${user.customer_id}`);
+      setBookingHistory(response.data.closed_rides);
     } catch (error) {
       console.error('Fetch booking history error:', error);
       // Mock data for demo

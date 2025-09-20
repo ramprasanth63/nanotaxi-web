@@ -1,11 +1,11 @@
 {
   "expo": {
-    "name": "nanosuperapp",
-    "slug": "nanosuperapp",
+    "name": "NanoTaxi",
+    "slug": "NanoTaxi",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
-    "scheme": "nanosuperapp",
+    "scheme": "NanoTaxi",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "ios": {
@@ -17,7 +17,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.gokulrajalp.nanosuperapp"
+      "package": "com.gokulrajalp.NanoTaxi"
     },
     "web": {
       "bundler": "metro",
@@ -34,7 +34,8 @@
           "resizeMode": "contain",
           "backgroundColor": "#ffffff"
         }
-      ]
+      ],
+      "expo-maps"
     ],
     "experiments": {
       "typedRoutes": true

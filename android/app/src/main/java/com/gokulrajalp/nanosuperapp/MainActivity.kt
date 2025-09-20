@@ -1,4 +1,4 @@
-package com.gokulrajalp.nanosuperapp
+package com.gokulrajalp.NanoTaxi
 import expo.modules.splashscreen.SplashScreenManager
 
 import android.os.Build

@@ -3,12 +3,12 @@ import { useRouter } from 'expo-router';
 import React from 'react';
 import {
   Image,
-  SafeAreaView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 import LocationScreen from '../booking/location';
 
@@ -22,7 +22,7 @@ export default function HomeScreen() {
         <View style={styles.headerLeft}>
           <Text style={styles.greeting}>
             {/* {isLoggedIn ? `Hello, ${user?.username}!` : 'Welcome!'} */}
-            Book A Journey
+            NANO Taxi
           </Text>
           <Text style={styles.subGreeting}>Where would you like to go?</Text>
         </View>

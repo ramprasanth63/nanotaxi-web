@@ -16,7 +16,7 @@ import {
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 // Use the ORS Matrix API for real driving distance calculation
 const OPENROUTESERVICE_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImY3MDRkYTQ3MWYxNDRiMTdiODBiMGViNzQwZTZiY2NjIiwiaCI6Im11cm11cjY0In0=";
-
+const GOOGLE_MAPS_API_KEY = "AIzaSyCy9vw9wy_eZeYd4BO9ifFiky2vOfvB-zc";
 export default function VehicleSelectionScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -61,7 +61,11 @@ export default function VehicleSelectionScreen() {
     fetchVehicles();
     // Calculate driving distance via ORS
     (async () => {
-      const dist = await getORSDrivingDistance(startLocation, endLocation);
+      let dist = await getGoogleDrivingDistance(startLocation, endLocation);
+
+      if (!dist || dist.distanceKm === 0) {
+        dist = await getORSDrivingDistance(startLocation, endLocation);
+      }
       setDistance(dist);
     })();
   }, []);
@@ -86,9 +90,9 @@ export default function VehicleSelectionScreen() {
           end_point: endLocation.name,
         }
       );
-      console.log("Vehicle fetch response:", response.data);
+      // console.log("Vehicle fetch response:", response.data);
       const baseurl = await fetchBaseURL();
-      console.log("Base URL for images:", baseurl);
+      // console.log("Base URL for images:", baseurl);
       // add baseurl to vehicle image URLs
       const vehiclesWithImages = response.data.available_vehicles.map((vehicle: Vehicle) => ({
         ...vehicle,
@@ -138,6 +142,32 @@ export default function VehicleSelectionScreen() {
     }
   };
 
+  async function getGoogleDrivingDistance(start: Location, end: Location): Promise<number> {
+  try {
+    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${start.latitude},${start.longitude}&destinations=${end.latitude},${end.longitude}&mode=driving&key=${GOOGLE_MAPS_API_KEY}`;
+
+    const response = await fetch(url);
+    const data = await response.json();
+
+    if (
+      data.rows &&
+      data.rows[0] &&
+      data.rows[0].elements &&
+      data.rows[0].elements[0] &&
+      data.rows[0].elements[0].distance
+    ) {
+      // Convert meters to kilometers
+      return data.rows[0].elements[0].distance.value / 1000;
+    }
+
+    return 0;
+  } catch (error) {
+    console.error("Google Driving Distance error:", error);
+    return 0;
+  }
+}
+
+
   // Use ORS Matrix API for driving distance!
   async function getORSDrivingDistance(start: Location, end: Location): Promise<number> {
     try {
@@ -170,31 +200,19 @@ export default function VehicleSelectionScreen() {
 
   // Calculate fare using driving distance
   const calculateFare = async (vehicle: Vehicle, dist: number) => {
-    console.log("Calculating fare for", vehicle.name, "over", dist, "km");
+    // console.log("Calculating fare for", vehicle.name, "over", dist, "km");
     try {
       // Try your fare API first
       try {
-        const baseFare = 0;
-        const driverFee = 300;
-        const tollAmount = dist > 10 ? 400 : 0;
-        const totalFare = (dist * vehicle.pricePerKm) + baseFare + driverFee + tollAmount;
+        const baseFare = dist * vehicle.pricePerKm;
+        const driverFee = dist > 200 ? 300 : 0;
+        const totalFare = baseFare + driverFee;
         setFare(Math.round(totalFare));
-        // const response = await apiGet(`/api/fare?distance=${dist}&vehicleType=${vehicle.type}`);
-        // setFare(response.data.fare);
       } catch (error) {
-        // Local calculation fallback
-        const baseFare = 0;
-        const driverFee = 300;
-        const tollAmount = dist > 10 ? 400 : 0;
-        const totalFare = (dist * vehicle.pricePerKm) + baseFare + driverFee + tollAmount;
-        setFare(Math.round(totalFare));
+        console.error('Fare API error, using local calc:', error);
       }
     } catch (error) {
-      const baseFare = 0;
-      const driverFee = 300;
-      const tollAmount = dist > 10 ? 400 : 0;
-      const totalFare = (dist * vehicle.pricePerKm) + baseFare + driverFee + tollAmount;
-      setFare(Math.round(totalFare));
+      console.error('Fare calculation error:', error);
     }
   };
 
@@ -211,6 +229,7 @@ export default function VehicleSelectionScreen() {
         pickupOption,
         pickupDate: pickupDate ? pickupDate.toISOString() : null,
         pickupTime: pickupTime ? pickupTime.toISOString() : null,
+        roundTrip: params.roundTrip as string | undefined || 'false',
       },
     });
   };
@@ -387,19 +406,16 @@ export default function VehicleSelectionScreen() {
 
       <View style={styles.footer}>
         {/* Price breakdown above buttons */}
-        {selectedVehicle && fare && showBreakdown && (
+                {selectedVehicle && fare && showBreakdown && (
           <View style={{ marginBottom: 12, backgroundColor: "#F3F4F6", borderRadius: 8, padding: 12 }}>
             <Text style={{ fontWeight: "bold", marginBottom: 4 }}>Price Breakdown:</Text>
-            <Text>Base Fare: ₹0</Text>
-            <Text>Driver Fee: ₹300</Text>
-            <Text>
-              Toll: ₹{distance > 10 ? 400 : 0}
-            </Text>
-            <Text>
-              Distance Fare: ₹{distance && selectedVehicle ? Math.round(distance * selectedVehicle.pricePerKm) : 0}
-            </Text>
+            <Text>Base Fare: ₹{distance && selectedVehicle ? Math.round(distance * selectedVehicle.pricePerKm) : 0}</Text>
+            <Text>Driver Fee: ₹{distance > 200 ? 300 : 0}</Text>
             <Text style={{ fontWeight: "bold", marginTop: 6 }}>
               Total: ₹{fare}
+            </Text>
+            <Text style={{ color: '#6B7280', fontSize: 12, marginTop: 4 }}>
+              Price is inclusive of GST and exclusive of toll.
             </Text>
           </View>
         )}

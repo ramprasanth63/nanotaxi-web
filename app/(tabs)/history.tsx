@@ -1,31 +1,40 @@
-import React, { useState, useEffect } from 'react';
+import { useAuth } from '@/contexts/AuthContext';
+import { useBooking } from '@/contexts/BookingContext';
+import { Booking } from '@/types';
+import { useRouter } from 'expo-router';
+import React, { useEffect, useState } from 'react';
 import {
-  View,
-  Text,
-  TouchableOpacity,
-  StyleSheet,
+  ActivityIndicator,
+  Alert,
+  RefreshControl,
   SafeAreaView,
   ScrollView,
-  RefreshControl,
-  Alert,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
-import { useRouter } from 'expo-router';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import { useBooking } from '@/contexts/BookingContext';
-import { useAuth } from '@/contexts/AuthContext';
-import { Booking } from '@/types';
 
 export default function HistoryScreen() {
   const router = useRouter();
   const { bookingHistory, fetchBookingHistory, rateBooking } = useBooking();
   const { isLoggedIn } = useAuth();
   const [refreshing, setRefreshing] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    if (isLoggedIn) {
-      fetchBookingHistory();
-    }
-  }, [isLoggedIn]);
+useEffect(() => {
+  let isMounted = true;
+  if (isLoggedIn) {
+    setLoading(true);
+    fetchBookingHistory().finally(() => {
+      if (isMounted) setLoading(false);
+    });
+  } else {
+    setLoading(false);
+  }
+  return () => { isMounted = false; };
+}, [isLoggedIn]);
 
   const onRefresh = async () => {
     setRefreshing(true);
@@ -63,14 +72,14 @@ export default function HistoryScreen() {
         <View style={styles.dateContainer}>
           <MaterialCommunityIcons name="calendar" size={16} color="#6B7280" />
           <Text style={styles.dateText}>
-            {new Date(booking.createdAt).toLocaleDateString()}
+            {new Date(booking.date_of_travel).toLocaleDateString()}
           </Text>
         </View>
         <View style={[
           styles.statusBadge,
           { backgroundColor: getStatusColor(booking.status) }
         ]}>
-          <Text style={styles.statusText}>{booking.status}</Text>
+          <Text style={styles.statusText}>{booking.status === 'Started' ? 'Completed' : booking.status}</Text>
         </View>
       </View>
 
@@ -78,14 +87,14 @@ export default function HistoryScreen() {
         <View style={styles.routeItem}>
           <MaterialCommunityIcons name="map-marker" size={16} color="#10B981" />
           <Text style={styles.routeText} numberOfLines={1}>
-            {booking.startLocation.name}
+            {booking.start_point}
           </Text>
         </View>
         <View style={styles.routeLine} />
         <View style={styles.routeItem}>
           <MaterialCommunityIcons name="map-marker" size={16} color="#EF4444" />
           <Text style={styles.routeText} numberOfLines={1}>
-            {booking.endLocation.name}
+            {booking.end_point}
           </Text>
         </View>
       </View>
@@ -93,11 +102,11 @@ export default function HistoryScreen() {
       <View style={styles.tripDetails}>
         <View style={styles.detailItem}>
           <MaterialCommunityIcons name="car" size={16} color="#6B7280" />
-          <Text style={styles.detailText}>{booking.vehicle.name}</Text>
+          <Text style={styles.detailText}>{booking.vehicle_type}</Text>
         </View>
         <View style={styles.detailItem}>
           <MaterialCommunityIcons name="currency-inr" size={16} color="#6B7280" />
-          <Text style={styles.detailText}>₹{booking.fare}</Text>
+          <Text style={styles.detailText}>₹{booking.total_amount}</Text>
         </View>
       </View>
 
@@ -147,99 +156,13 @@ export default function HistoryScreen() {
 
   const getStatusColor = (status: string) => {
     switch (status) {
-      case 'completed': return '#10B981';
+      case 'Started': return '#10B981';
       case 'cancelled': return '#EF4444';
       default: return '#6B7280';
     }
   };
 
-  // Mock booking history for demo
-  const mockHistory: Booking[] = [
-    {
-      id: 'hist1',
-      userId: '1',
-      startLocation: {
-        id: '1',
-        name: 'Electronic City',
-        address: 'Electronic City, Bangalore',
-        latitude: 12.8456,
-        longitude: 77.6603,
-      },
-      endLocation: {
-        id: '2',
-        name: 'MG Road',
-        address: 'Mahatma Gandhi Road, Bangalore',
-        latitude: 12.9716,
-        longitude: 77.5946,
-      },
-      vehicle: {
-        id: '1',
-        type: 'Sedan',
-        name: 'Namma Sedan',
-        pricePerKm: 16,
-        image: 'https://images.pexels.com/photos/3802510/pexels-photo-3802510.jpeg',
-        capacity: 4,
-      },
-      fare: 245,
-      status: 'completed',
-      createdAt: new Date(Date.now() - 86400000).toISOString(), // Yesterday
-      amountPending: 0,
-      amountPaid: 245,
-      rating: 5,
-      feedback: 'Great ride, very comfortable!',
-      driver: {
-        id: '1',
-        name: 'Rajesh Kumar',
-        phone: '+91 9876543210',
-        carNumber: 'KA-01-AB-1234',
-        rating: 4.8,
-        latitude: 12.8456,
-        longitude: 77.6603,
-      },
-    },
-    {
-      id: 'hist2',
-      userId: '1',
-      startLocation: {
-        id: '3',
-        name: 'Koramangala',
-        address: 'Koramangala, Bangalore',
-        latitude: 12.9279,
-        longitude: 77.6271,
-      },
-      endLocation: {
-        id: '4',
-        name: 'Bangalore Airport',
-        address: 'Kempegowda International Airport, Bangalore',
-        latitude: 13.1986,
-        longitude: 77.7066,
-      },
-      vehicle: {
-        id: '1',
-        type: 'Mini',
-        name: 'Namma Mini',
-        pricePerKm: 12,
-        image: 'https://images.pexels.com/photos/116675/pexels-photo-116675.jpeg',
-        capacity: 4,
-      },
-      fare: 420,
-      status: 'completed',
-      createdAt: new Date(Date.now() - 172800000).toISOString(), // 2 days ago
-      amountPending: 0,
-      amountPaid: 420,
-      driver: {
-        id: '2',
-        name: 'Suresh Babu',
-        phone: '+91 9876543211',
-        carNumber: 'KA-02-CD-5678',
-        rating: 4.6,
-        latitude: 12.9279,
-        longitude: 77.6271,
-      },
-    },
-  ];
-
-  const displayHistory = bookingHistory.length > 0 ? bookingHistory : (isLoggedIn ? mockHistory : []);
+  const displayHistory = bookingHistory.length > 0 ? bookingHistory : [];
 
   if (!isLoggedIn) {
     return (
@@ -259,6 +182,15 @@ export default function HistoryScreen() {
       </SafeAreaView>
     );
   }
+  if (loading) {
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
+        <ActivityIndicator size="large" color="#10B981" />
+      </View>
+    </SafeAreaView>
+  );
+}
 
   return (
     <SafeAreaView style={styles.container}>

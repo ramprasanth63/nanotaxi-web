@@ -4,15 +4,14 @@ let api: AxiosInstance | null = null;
 
 // Dynamically fetch the backend base URL from Vercel
 export const fetchBaseURL = async (): Promise<string> => {
-  return 'https://a630dd3395c2.ngrok-free.app';
-  // try {
-  //   const response = await axios.get('https://server-url-chi.vercel.app/url');
-  //   console.log('✅ Fetched dynamic URL:', response.data?.base_url);
-  //   return response.data?.base_url || 'https://4c937840d5fd.ngrok-free.app/'; // fallback
-  // } catch (error) {
-  //   console.warn('❌ Failed to fetch dynamic URL:', error);
-  //   return 'https://api.namma-taxi.com'; // fallback to your API domain
-  // }
+  try {
+    const response = await axios.get('https://server-url-chi.vercel.app/url');
+    // console.log('✅ Fetched dynamic URL:', response.data?.base_url);
+    return response.data?.base_url || 'https://4c937840d5fd.ngrok-free.app/'; // fallback
+  } catch (error) {
+    console.warn('❌ Failed to fetch dynamic URL:', error);
+    return 'https://api.namma-taxi.com'; // fallback to your API domain
+  }
 };
 
 // Initialize the API client only once
@@ -33,7 +32,7 @@ export const getApiClient = async (): Promise<AxiosInstance> => {
   // Add request interceptor for logging
   api.interceptors.request.use(
     (config) => {
-      console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
+      // console.log(`🚀 API Request: ${config.method?.toUpperCase()} ${config.url}`);
       return config;
     },
     (error) => {
@@ -45,7 +44,7 @@ export const getApiClient = async (): Promise<AxiosInstance> => {
   // Add response interceptor for logging
   api.interceptors.response.use(
     (response) => {
-      console.log(`✅ API Response: ${response.status} ${response.config.url}`);
+      // console.log(`✅ API Response: ${response.status} ${response.config.url}`);
       return response;
     },
     (error) => {
@@ -74,7 +73,7 @@ export const apiGet = async (endpoint: string, config = {}) => {
 
 export const apiPost = async (endpoint: string, data = {}, config = {}) => {
   const client = await getApiClient();
-  console.log("client", client);
+  // console.log("client", client);
   return client.post(endpoint, data, config);
 };
 

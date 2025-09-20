@@ -1,4 +1,4 @@
-package com.gokulrajalp.nanosuperapp
+package com.gokulrajalp.NanoTaxi
 
 import android.app.Application
 import android.content.res.Configuration
