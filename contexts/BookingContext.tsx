@@ -87,6 +87,7 @@ const { isLoggedIn, user } = useAuth();
         date_of_travel: formatDate(pickupDate),
         pickup_time: formatTime(pickupTime),
         ride_instructions: pickupInstructions || '',
+        round_trip: roundTrip || false,
       };
       // console.log("Booking payload:", payload);
 

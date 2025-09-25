@@ -17,6 +17,7 @@ import {
 // import MapView, { Marker } from 'react-native-maps';
 // import { apiGet, apiPost } from '@/utils/api';
 // import DateTimePickerModal from 'react-native-modal-datetime-picker';
+import HireDriverButton from '@/components/HireDriverButton';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -808,6 +809,10 @@ export default function LocationScreen() {
           </TouchableOpacity>
         )}
       </View>
+
+      <HireDriverButton 
+  onPress={() => router.push('/booking/HireDriverScreen')} 
+/>
 
       {/* Date Time Pickers */}
       {showDatePicker && (
