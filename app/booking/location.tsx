@@ -18,6 +18,7 @@ import {
 // import { apiGet, apiPost } from '@/utils/api';
 // import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import HireDriverButton from '@/components/HireDriverButton';
+import LocationInputModal from '@/components/LocationInputModal';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -54,7 +55,44 @@ export default function LocationScreen() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [editingStartLocation, setEditingStartLocation] = useState(false);
   const [editingDestination, setEditingDestination] = useState(false);
-  
+
+  const [showPickupModal, setShowPickupModal] = useState(false);
+  const [showDestinationModal, setShowDestinationModal] = useState(false);
+  const [showStartLocationModal, setShowStartLocationModal] = useState(false);
+
+  const handleOpenPickupModal = () => {
+    setShowPickupModal(true);
+    setEditingPickup(true);
+  };
+
+  const handleClosePickupModal = () => {
+    setShowPickupModal(false);
+    setEditingPickup(false);
+    setPickupSuggestions([]);
+  };
+
+  const handleOpenDestinationModal = () => {
+    setShowDestinationModal(true);
+    setEditingDestination(true);
+  };
+
+  const handleCloseDestinationModal = () => {
+    setShowDestinationModal(false);
+    setEditingDestination(false);
+    setLocationSuggestions([]);
+  };
+
+  const handleOpenStartLocationModal = () => {
+    setShowStartLocationModal(true);
+    setEditingStartLocation(true);
+  };
+
+  const handleCloseStartLocationModal = () => {
+    setShowStartLocationModal(false);
+    setEditingStartLocation(false);
+    setStartLocationSuggestions([]);
+  };
+
   // Hourly Package States
   const [bookingMode, setBookingMode] = useState<'trip' | 'hourly'>('trip');
   const [hourlyPackages, setHourlyPackages] = useState<HourlyPackage[]>([]);
@@ -63,7 +101,7 @@ export default function LocationScreen() {
   const [calculatedKm, setCalculatedKm] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
   const [packagesLoading, setPackagesLoading] = useState(false);
-  
+
   // Booking Form States
   const [pickupPlace, setPickupPlace] = useState('');
   const [pickupSuggestions, setPickupSuggestions] = useState<LocationType[]>([]);
@@ -76,7 +114,7 @@ export default function LocationScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
-  
+
   const [mapRegion, setMapRegion] = useState({
     latitude: 12.9716,
     longitude: 77.5946,
@@ -90,7 +128,7 @@ export default function LocationScreen() {
   useEffect(() => {
     isMounted.current = true;
     getCurrentLocation();
-    
+
     return () => {
       isMounted.current = false;
     };
@@ -172,7 +210,7 @@ export default function LocationScreen() {
 
   const getCurrentLocation = async () => {
     if (!isMounted.current) return;
-    
+
     setLoading(true);
     try {
       const { status } = await Location.requestForegroundPermissionsAsync();
@@ -200,7 +238,7 @@ export default function LocationScreen() {
       const location = await Location.getCurrentPositionAsync({
         accuracy: Location.Accuracy.Balanced,
       });
-      
+
       const currentLoc: LocationType = {
         id: 'current',
         name: 'Current Location',
@@ -208,26 +246,26 @@ export default function LocationScreen() {
         latitude: location.coords.latitude,
         longitude: location.coords.longitude,
       };
-      
+
       if (isMounted.current) {
         setCurrentLocation(currentLoc);
         setStartLocationQuery('Current Location');
       }
-      
+
       try {
         const reverseGeocode = await Location.reverseGeocodeAsync({
           latitude: location.coords.latitude,
           longitude: location.coords.longitude,
         });
-        
+
         if (reverseGeocode.length > 0) {
           const address = reverseGeocode[0];
           const fullAddress = `${address.street || ''} ${address.city || ''} ${address.region || ''}`.trim();
           const locationName = address.name || address.street || 'Current Location';
-          
+
           currentLoc.address = fullAddress;
           currentLoc.name = locationName;
-          
+
           if (isMounted.current) {
             setCurrentLocation({ ...currentLoc });
             setStartLocationQuery(locationName);
@@ -338,7 +376,7 @@ export default function LocationScreen() {
       const url = `https://api.openrouteservice.org/geocode/search?api_key=${OPENROUTESERVICE_API_KEY}&text=${encodeURIComponent(query)}&boundary.country=IND`;
       const res = await fetch(url);
       const data = await res.json();
-      
+
       const features = data.features || [];
       const locations: LocationType[] = features.map((feature: any, i: number) => ({
         id: feature.properties.id || String(i),
@@ -404,7 +442,7 @@ export default function LocationScreen() {
 
   const adjustHours = (increment: boolean) => {
     if (!selectedPackage) return;
-    
+
     if (increment) {
       setSelectedHours(selectedHours + 1);
     } else {
@@ -420,12 +458,12 @@ export default function LocationScreen() {
       Alert.alert('Error', 'Please select a package');
       return;
     }
-    
+
     if (!selectedPickupLocation) {
       Alert.alert('Error', 'Please select pickup location');
       return;
     }
-    
+
     if (!pickupAddress.trim()) {
       Alert.alert('Error', 'Please enter pickup address');
       return;
@@ -453,7 +491,7 @@ export default function LocationScreen() {
 
       const response = await apiPost('/api/book_package/', payload);
       console.log("responce", response);
-      
+
       if (response.status === 201) {
         Alert.alert('Success', 'Package booked successfully!', [
           {
@@ -528,40 +566,40 @@ export default function LocationScreen() {
       <ScrollView style={styles.scrollContainer}>
         {bookingMode === 'trip' ? (
           /* Existing Trip Booking UI */
-          <View>
-            <View style={styles.locationInputs}>
-              <View style={styles.inputContainer}>
-                <MaterialCommunityIcons name="map-marker" size={20} color="#10B981" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  value={startLocationQuery}
-                  onChangeText={setStartLocationQuery}
-                  placeholder="Pickup location"
-                  onFocus={() => setEditingStartLocation(true)}
-                />
-                <TouchableOpacity onPress={getCurrentLocation}>
-                  <MaterialCommunityIcons name="navigation" size={20} color="#6B7280" />
-                </TouchableOpacity>
-                <TouchableOpacity 
-                  onPress={() => setEditingStartLocation(!editingStartLocation)}
-                  style={styles.editButton}
-                >
-                  <MaterialCommunityIcons name="pencil" size={16} color="#6B7280" />
-                </TouchableOpacity>
-              </View>
+          <View style={styles.locationInputs}>
+  <TouchableOpacity
+    style={styles.inputContainer}
+    onPress={handleOpenStartLocationModal}
+  >
+    <MaterialCommunityIcons name="map-marker" size={20} color="#10B981" style={styles.inputIcon} />
+    <Text style={[styles.inputText, { color: startLocationQuery ? '#1F2937' : '#9CA3AF' }]}>
+      {startLocationQuery || 'Pickup location'}
+    </Text>
+    <View style={styles.inputActions}>
+      <TouchableOpacity
+        onPress={(e) => {
+          e.stopPropagation();
+          getCurrentLocation();
+        }}
+        style={styles.actionButton}
+      >
+        <MaterialCommunityIcons name="navigation" size={20} color="#6B7280" />
+      </TouchableOpacity>
+      <MaterialCommunityIcons name="chevron-right" size={16} color="#D1D5DB" />
+    </View>
+  </TouchableOpacity>
 
-              <View style={styles.inputContainer}>
-                <MaterialCommunityIcons name="map-marker" size={20} color="#EF4444" style={styles.inputIcon} />
-                <TextInput
-                  style={styles.input}
-                  value={destinationQuery}
-                  onChangeText={setDestinationQuery}
-                  placeholder="Where to? (e.g., Chennai, Airport)"
-                  onFocus={() => setEditingDestination(true)}
-                />
-              </View>
-            </View>
-          </View>
+  <TouchableOpacity
+    style={styles.inputContainer}
+    onPress={handleOpenDestinationModal}
+  >
+    <MaterialCommunityIcons name="map-marker" size={20} color="#EF4444" style={styles.inputIcon} />
+    <Text style={[styles.inputText, { color: destinationQuery ? '#1F2937' : '#9CA3AF' }]}>
+      {destinationQuery || 'Where to? (e.g., Chennai, Airport)'}
+    </Text>
+    <MaterialCommunityIcons name="chevron-right" size={16} color="#D1D5DB" />
+  </TouchableOpacity>
+</View>
         ) : (
           /* Hourly Package UI */
           <View>
@@ -627,37 +665,44 @@ export default function LocationScreen() {
                     {/* Booking Form */}
                     <View style={styles.bookingForm}>
                       <Text style={styles.sectionTitle}>Booking Details</Text>
-                      
-                      {/* Pickup Place */}
-                      <View style={styles.inputContainer}>
-                        <MaterialCommunityIcons name="map-marker" size={20} color="#10B981" style={styles.inputIcon} />
-                        <TextInput
-                          style={styles.input}
-                          value={pickupPlace}
-                          onChangeText={setPickupPlace}
-                          placeholder="Pickup place"
-                          onFocus={() => setEditingPickup(true)}
-                        />
-                      </View>
 
-                    {editingPickup && pickupSuggestions.length > 0 && (
-              <>
-                <Text style={styles.suggestionHeader}>Pickup Locations</Text>
-                {pickupSuggestions.map((location) => (
-                  <TouchableOpacity
-                    key={`pickup-${location.id}`}
-                    style={styles.suggestionItem}
-                    onPress={() => selectPickupLocation(location)}
-                  >
-                    <MaterialCommunityIcons name="map-marker" size={16} color="#10B981" />
-                    <View style={styles.suggestionText}>
-                      <Text style={styles.suggestionName}>{location.name}</Text>
-                      <Text style={styles.suggestionAddress}>{location.address}</Text>
-                    </View>
-                  </TouchableOpacity>
-                ))}
-              </>
-            )}
+                      {/* Pickup Place */}
+                      <TouchableOpacity
+                        style={styles.inputContainer}
+                        onPress={handleOpenPickupModal}
+                      >
+                        <MaterialCommunityIcons name="map-marker" size={20} color="#10B981" style={styles.inputIcon} />
+                        <Text style={[styles.inputText, { color: pickupPlace ? '#1F2937' : '#9CA3AF' }]}>
+                          {pickupPlace || 'Pickup place'}
+                        </Text>
+                        <MaterialCommunityIcons name="chevron-right" size={16} color="#D1D5DB" />
+                      </TouchableOpacity>
+
+                      {/* {editingPickup && pickupSuggestions.length > 0 && (
+                        <View style={styles.pickupSuggestionsContainer}>
+                          <Text style={styles.suggestionHeader}>Pickup Locations</Text>
+                          <ScrollView
+                            style={styles.suggestionScrollView}
+                            showsVerticalScrollIndicator={true}
+                            nestedScrollEnabled={true}
+                            contentContainerStyle={styles.suggestionContentContainer}
+                          >
+                            {pickupSuggestions.map((location) => (
+                              <TouchableOpacity
+                                key={`pickup-${location.id}`}
+                                style={styles.suggestionItem}
+                                onPress={() => selectPickupLocation(location)}
+                              >
+                                <MaterialCommunityIcons name="map-marker" size={16} color="#10B981" />
+                                <View style={styles.suggestionText}>
+                                  <Text style={styles.suggestionName}>{location.name}</Text>
+                                  <Text style={styles.suggestionAddress}>{location.address}</Text>
+                                </View>
+                              </TouchableOpacity>
+                            ))}
+                          </ScrollView>
+                        </View>
+                      )} */}
 
                       {/* Date and Time */}
                       <View style={styles.dateTimeRow}>
@@ -670,14 +715,14 @@ export default function LocationScreen() {
                             {dateOfTravel.toDateString()}
                           </Text>
                         </TouchableOpacity>
-                        
+
                         <TouchableOpacity
                           style={[styles.inputContainer, styles.dateTimeInput]}
                           onPress={() => setShowTimePicker(true)}
                         >
                           <MaterialCommunityIcons name="clock" size={20} color="#10B981" style={styles.inputIcon} />
                           <Text style={styles.dateTimeText}>
-                            {pickupTime.toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'})}
+                            {pickupTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
                           </Text>
                         </TouchableOpacity>
                       </View>
@@ -714,10 +759,10 @@ export default function LocationScreen() {
           </View>
         )}
 
- 
+
 
         {/* Suggestions */}
-        {(locationSuggestions.length > 0 || startLocationSuggestions.length > 0 || pickupSuggestions.length > 0) && (
+        {/* {(locationSuggestions.length > 0 || startLocationSuggestions.length > 0 || pickupSuggestions.length > 0) && (
           <View style={styles.suggestionsContainer}>
             {editingStartLocation && startLocationSuggestions.length > 0 && (
               <>
@@ -737,7 +782,7 @@ export default function LocationScreen() {
                 ))}
               </>
             )}
-            
+
             {!editingStartLocation && editingDestination && locationSuggestions.length > 0 && (
               <>
                 <Text style={styles.suggestionHeader}>Destinations</Text>
@@ -757,19 +802,19 @@ export default function LocationScreen() {
               </>
             )}
           </View>
-        )}
+        )} */}
 
-               {bookingMode == "trip" && 
-        <View style={styles.roundTripContainer}>
-              <Switch
-                value={roundTrip}
-                onValueChange={() => setRoundTrip(!roundTrip)}
-                trackColor={{ false: "#D1D5DB", true: "#10B981" }}
-                thumbColor={roundTrip ? "#10B981" : "#f4f3f4"}
-                style={styles.roundTripCheckbox}
-              />
-              <Text style={styles.roundTripLabel}>Round Trip</Text>
-            </View>
+        {bookingMode == "trip" &&
+          <View style={styles.roundTripContainer}>
+            <Switch
+              value={roundTrip}
+              onValueChange={() => setRoundTrip(!roundTrip)}
+              trackColor={{ false: "#D1D5DB", true: "#10B981" }}
+              thumbColor={roundTrip ? "#10B981" : "#f4f3f4"}
+              style={styles.roundTripCheckbox}
+            />
+            <Text style={styles.roundTripLabel}>Round Trip</Text>
+          </View>
         }
 
 
@@ -789,7 +834,7 @@ export default function LocationScreen() {
         ) : (
           <TouchableOpacity
             style={[
-              styles.continueButton, 
+              styles.continueButton,
               (!selectedPackage || !selectedPickupLocation || !pickupAddress.trim() || bookingLoading) && styles.disabledButton
             ]}
             onPress={handleBookPackage}
@@ -810,9 +855,9 @@ export default function LocationScreen() {
         )}
       </View>
 
-      <HireDriverButton 
-  onPress={() => router.push('/booking/HireDriverScreen')} 
-/>
+      <HireDriverButton
+        onPress={() => router.push('/booking/HireDriverScreen')}
+      />
 
       {/* Date Time Pickers */}
       {showDatePicker && (
@@ -843,12 +888,59 @@ export default function LocationScreen() {
           }}
         />
       )}
+
+
+      {/* Location Input Modals */}
+      <LocationInputModal
+        visible={showPickupModal}
+        onClose={handleClosePickupModal}
+        onSelectLocation={selectPickupLocation}
+        onSearchChange={setPickupPlace}
+        title="Select Pickup Location"
+        placeholder="Search for pickup location..."
+        initialValue={pickupPlace}
+        suggestions={pickupSuggestions}
+        loading={searchLoading}
+        iconName="map-marker"
+        iconColor="#10B981"
+      />
+
+      <LocationInputModal
+        visible={showDestinationModal}
+        onClose={handleCloseDestinationModal}
+        onSelectLocation={selectDestination}
+        onSearchChange={setDestinationQuery}
+        title="Select Destination"
+        placeholder="Where to? (e.g., Chennai, Airport)"
+        initialValue={destinationQuery}
+        suggestions={locationSuggestions}
+        loading={searchLoading}
+        iconName="map-marker"
+        iconColor="#EF4444"
+      />
+
+      <LocationInputModal
+        visible={showStartLocationModal}
+        onClose={handleCloseStartLocationModal}
+        onSelectLocation={selectStartLocation}
+        onSearchChange={setStartLocationQuery}
+        title="Select Pickup Location"
+        placeholder="Search for pickup location..."
+        initialValue={startLocationQuery}
+        suggestions={startLocationSuggestions}
+        loading={searchLoading}
+        iconName="map-marker"
+        iconColor="#10B981"
+      />
+
+
+
     </SafeAreaView>
   );
 
   function calculateDistance(): number {
     if (!currentLocation || !destination) return 0;
-    
+
     const lat1 = currentLocation.latitude;
     const lon1 = currentLocation.longitude;
     const lat2 = destination.latitude;
@@ -894,6 +986,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     backgroundColor: '#F3F4F6',
     margin: 16,
+    marginTop: 5,
     borderRadius: 12,
     padding: 4,
   },
@@ -928,9 +1021,10 @@ const styles = StyleSheet.create({
     borderColor: '#D1D5DB',
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
+    paddingVertical: 14, // Increased padding for better touch target
     backgroundColor: '#F9FAFB',
     marginBottom: 8,
+    minHeight: 52, // Ensure consistent height
   },
   inputIcon: {
     marginRight: 12,
@@ -1096,32 +1190,31 @@ const styles = StyleSheet.create({
     marginBottom: 16,
   },
   suggestionHeader: {
-    fontSize: 14,
+    fontSize: 16,
     fontWeight: '600',
+    padding: 12,
+    paddingBottom: 8,
     color: '#374151',
-    paddingHorizontal: 24,
-    paddingVertical: 8,
-    backgroundColor: '#F3F4F6',
   },
   suggestionItem: {
     flexDirection: 'row',
     alignItems: 'center',
-    paddingHorizontal: 24,
+    paddingHorizontal: 12,
     paddingVertical: 12,
     borderBottomWidth: 1,
     borderBottomColor: '#F3F4F6',
   },
   suggestionText: {
-    marginLeft: 12,
     flex: 1,
+    marginLeft: 8,
   },
   suggestionName: {
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '500',
-    color: '#1F2937',
+    color: '#111827',
   },
   suggestionAddress: {
-    fontSize: 14,
+    fontSize: 12,
     color: '#6B7280',
     marginTop: 2,
   },
@@ -1153,5 +1246,38 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginRight: 8,
+  },
+  pickupSuggestionsContainer: {
+    maxHeight: 300, // Larger max height
+    backgroundColor: '#ffffff',
+    borderWidth: 1,
+    borderColor: '#D1D5DB',
+    borderRadius: 8,
+    marginTop: 8,
+    elevation: 4,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+  },
+  suggestionScrollView: {
+    flexGrow: 1, // Allow growth but respect container maxHeight
+    maxHeight: 250, // Scroll area max height
+  },
+  suggestionContentContainer: {
+    paddingBottom: 8, // Add padding to bottom of scroll content
+  },
+  inputText: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: 2,
+  },
+  inputActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
+  },
+  actionButton: {
+    padding: 4,
   },
 });

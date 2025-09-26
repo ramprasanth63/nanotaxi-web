@@ -1,13 +1,16 @@
+import TaxiLoading from '@/components/TaxiLoading';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBooking } from '@/contexts/BookingContext';
 import { apiGet } from '@/services/apiClient';
 import { Booking } from '@/types';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
+import { Car, Phone, User } from 'lucide-react-native';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
+  Linking,
   Modal,
   RefreshControl,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,6 +18,7 @@ import {
   TouchableOpacity,
   View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
 // Replace the existing LatestOrderCard with this cleaned version
@@ -108,7 +112,23 @@ const LatestOrderCard = ({ fetchLatestBooking, latestBooking: rawLatestBooking, 
 
           <TouchableOpacity
             style={[styles.refreshButton, refreshing && styles.refreshButtonDisabled]}
-            onPress={() => fetchLatestBooking()}
+            onPress={async () => {
+              console.log("=== REFRESH BUTTON PRESSED ===");
+              console.log("onRefresh exists:", !!onRefresh);
+              console.log("refreshing state:", refreshing);
+
+              try {
+                if (onRefresh) {
+                  console.log("Calling onRefresh...");
+                  await onRefresh();
+                  console.log("onRefresh completed");
+                } else {
+                  console.log("onRefresh function not provided!");
+                }
+              } catch (error) {
+                console.error('Error in button press:', error);
+              }
+            }}
             disabled={refreshing}
             accessibilityLabel="Refresh latest booking"
           >
@@ -127,7 +147,7 @@ const LatestOrderCard = ({ fetchLatestBooking, latestBooking: rawLatestBooking, 
   if (latestBookingType === "packageTrip") {
     const isClosed = !!latestBooking.is_closed || !!latestBooking.is_ride_closed;
     const isConfirmed = !!latestBooking.is_confirmed;
-    const isStarted = (latestBooking.status === 'Started' || latestBooking.status === 'started')? true : false;
+    const isStarted = (latestBooking.status === 'Started' || latestBooking.status === 'started') ? true : false;
 
     return (
       <View style={styles.latestOrderCard}>
@@ -155,7 +175,23 @@ const LatestOrderCard = ({ fetchLatestBooking, latestBooking: rawLatestBooking, 
 
           <TouchableOpacity
             style={[styles.refreshButton, refreshing && styles.refreshButtonDisabled]}
-            onPress={() => fetchLatestBooking()}
+            onPress={async () => {
+              console.log("=== REFRESH BUTTON PRESSED ===");
+              console.log("onRefresh exists:", !!onRefresh);
+              console.log("refreshing state:", refreshing);
+
+              try {
+                if (onRefresh) {
+                  console.log("Calling onRefresh...");
+                  await onRefresh();
+                  console.log("onRefresh completed");
+                } else {
+                  console.log("onRefresh function not provided!");
+                }
+              } catch (error) {
+                console.error('Error in button press:', error);
+              }
+            }}
             disabled={refreshing}
             accessibilityLabel="Refresh latest booking"
           >
@@ -227,24 +263,24 @@ const LatestOrderCard = ({ fetchLatestBooking, latestBooking: rawLatestBooking, 
               <MaterialCommunityIcons name="check-circle" size={16} color="#ffffff" />
               <Text style={styles.primaryActionText}>Trip Completed</Text>
             </TouchableOpacity>
-          ) : isStarted ? 
-          (
-            <TouchableOpacity style={styles.primaryAction}>
-              <MaterialCommunityIcons name="car" size={16} color="#ffffff" />
-              <Text style={styles.primaryActionText}>Trip Started</Text>
-            </TouchableOpacity>
-          ) 
-          : isConfirmed ? (
-            <TouchableOpacity style={styles.primaryAction}>
-              <MaterialCommunityIcons name="car" size={16} color="#ffffff" />
-              <Text style={styles.primaryActionText}>Driver Confirmed</Text>
-            </TouchableOpacity>
-          ) : (
-            <TouchableOpacity style={styles.secondaryAction}>
-              <MaterialCommunityIcons name="clock-outline" size={16} color="#F59E0B" />
-              <Text style={styles.secondaryActionText}>Waiting for Driver</Text>
-            </TouchableOpacity>
-          )}
+          ) : isStarted ?
+            (
+              <TouchableOpacity style={styles.primaryAction}>
+                <MaterialCommunityIcons name="car" size={16} color="#ffffff" />
+                <Text style={styles.primaryActionText}>Trip Started</Text>
+              </TouchableOpacity>
+            )
+            : isConfirmed ? (
+              <TouchableOpacity style={styles.primaryAction}>
+                <MaterialCommunityIcons name="car" size={16} color="#ffffff" />
+                <Text style={styles.primaryActionText}>Driver Confirmed</Text>
+              </TouchableOpacity>
+            ) : (
+              <TouchableOpacity style={styles.secondaryAction}>
+                <MaterialCommunityIcons name="clock-outline" size={16} color="#F59E0B" />
+                <Text style={styles.secondaryActionText}>Waiting for Driver</Text>
+              </TouchableOpacity>
+            )}
         </View>
       </View>
     );
@@ -281,7 +317,23 @@ const LatestOrderCard = ({ fetchLatestBooking, latestBooking: rawLatestBooking, 
 
         <TouchableOpacity
           style={[styles.refreshButton, refreshing && styles.refreshButtonDisabled]}
-          onPress={() => fetchLatestBooking()}
+          onPress={async () => {
+            console.log("=== REFRESH BUTTON PRESSED ===");
+            console.log("onRefresh exists:", !!onRefresh);
+            console.log("refreshing state:", refreshing);
+
+            try {
+              if (onRefresh) {
+                console.log("Calling onRefresh...");
+                await onRefresh();
+                console.log("onRefresh completed");
+              } else {
+                console.log("onRefresh function not provided!");
+              }
+            } catch (error) {
+              console.error('Error in button press:', error);
+            }
+          }}
           disabled={refreshing}
           accessibilityLabel="Refresh latest booking"
         >
@@ -349,7 +401,7 @@ const LatestOrderCard = ({ fetchLatestBooking, latestBooking: rawLatestBooking, 
 
         <View style={styles.orderDetailItem}>
           <MaterialCommunityIcons name="currency-inr" size={16} color="#10B981" />
-          <Text style={[styles.orderDetailText, { color: '#10B981', fontWeight: '600' }]}>₹{String(nb.pending_payment || nb.total_amount || 0)}</Text>
+          <Text style={[styles.orderDetailText, { color: '#10B981', fontWeight: '600' }]}>{String(nb.total_amount || 0)}</Text>
         </View>
       </View>
 
@@ -426,19 +478,26 @@ export default function BookingsScreen() {
   const [latestBookingType, setLatestBookingType] = useState();
   const [refreshingLatest, setRefreshingLatest] = useState(false);
   const [packageBookings, setPackageBookings] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
     if (isLoggedIn) {
       fetchConfirmedBookings();
       fetchPackageBookings();
+      fetchLatestBooking();
     }
+    setIsLoading(false);
   }, [isLoggedIn]);
 
-  useEffect(() => {
-    fetchLatestBooking();
-  }, []);
 
   const fetchPackageBookings = async () => {
+    console.log("=== fetchPackageBookings called ===");
+
+    if (!user?.customer_id) { // Add this check
+      console.log("No user customer_id available");
+      return;
+    }
+
     try {
       const response = await apiGet(`/api/list_package_rides_by_customer/${user.customer_id}`);
       if (response.data && response.data.package_rides) {
@@ -460,14 +519,32 @@ export default function BookingsScreen() {
   };
 
   const onRefresh = async () => {
+    console.log("Refreshing bookings...");
     setRefreshing(true);
     await Promise.all([
+      fetchLatestBooking(),
       fetchConfirmedBookings(),
       fetchPackageBookings()
     ]);
     setRefreshing(false);
   };
 
+
+  const handleDriverCall = async () => {
+  const phoneNumber = '+919840407707';
+  const url = `tel:${phoneNumber}`;
+  
+  try {
+    const supported = await Linking.canOpenURL(url);
+    if (supported) {
+      await Linking.openURL(url);
+    } else {
+      console.log("Phone call not supported");
+    }
+  } catch (error) {
+    console.error('Error making phone call:', error);
+  }
+};
   const handleEditInstructions = (booking: Booking) => {
     setSelectedBooking(booking);
     setInstructionsText(booking.ride_instructions || booking.pickupInstructions || '');
@@ -489,32 +566,41 @@ export default function BookingsScreen() {
     setInstructionsText('');
   };
 
- const normalizeBookingData = (booking) => {
-  if (!booking) return null;
+  const normalizeBookingData = (booking) => {
+    if (!booking) return null;
 
-  const isConfirmed = booking.is_confirmed === true || booking.is_confirmed === 'true';
-  const isClosed = booking.is_ride_closed || booking.is_closed || false;
+    const isConfirmed = booking.is_confirmed === true || booking.is_confirmed === 'true';
+    const isClosed = booking.is_ride_closed || booking.is_closed || false;
 
-  return {
-    ...booking,
-    is_confirmed: isConfirmed,
-    is_ride_closed: isClosed,
-    status: booking.status || 'pending'
+    return {
+      ...booking,
+      is_confirmed: isConfirmed,
+      is_ride_closed: isClosed,
+      status: booking.status || 'pending'
+    };
   };
-};
 
   const fetchLatestBooking = async () => {
+    console.log("=== fetchLatestBooking called ===");
+
+    if (!user?.customer_id) { // Add this check
+      console.log("No user customer_id available");
+      return;
+    }
+
     try {
       setRefreshingLatest(true);
       const response = await apiGet(`/api/list_rides_by_customer/${user.customer_id}`);
       if (response.data && response.data.rides.length > 0) {
-        
+        console.log("Raw bookings fetched:", response.data.rides);
+
+        // Find the latest raw booking
         const latestRawBooking = response.data.rides.reduce((latestSoFar, current) => {
           const latestDate = new Date(latestSoFar?.created_at || latestSoFar?.date_of_travel || 0);
           const currentDate = new Date(current?.created_at || current?.date_of_travel || 0);
           return currentDate > latestDate ? current : latestSoFar;
         }, null as any);
-        
+
         const package_response = await apiGet(`/api/list_package_rides_by_customer/${user.customer_id}`);
 
         const latestPackageBooking = package_response.data.package_rides.reduce((latestSoFar, current) => {
@@ -557,21 +643,21 @@ export default function BookingsScreen() {
 
   const allBookings = useMemo(() => {
     const bookings = [...confirmedBookings];
-    
+
     // Add package bookings
     const normalizedPackageBookings = packageBookings.map(pkg => ({
       ...pkg,
       trip_type: 'package'
     }));
     bookings.push(...normalizedPackageBookings);
-    
+
     if (currentBooking) {
       bookings.unshift({
         ...currentBooking,
         trip_type: 'single'
       });
     }
-    
+
     // Sort by date (most recent first)
     return bookings.sort((a, b) => {
       const dateA = new Date(a.created_at || a.date_of_travel);
@@ -582,20 +668,20 @@ export default function BookingsScreen() {
 
   const filteredBookings = useMemo(() => {
     const activeBookings = allBookings.filter(booking => !booking.is_ride_closed && !booking.is_closed);
-    
+
     switch (viewMode) {
       case 'current':
-        return activeBookings.filter(booking => 
+        return activeBookings.filter(booking =>
           booking.status === 'Started' && !booking.is_ride_closed && !booking.is_closed
         );
       case 'accepted':
-        return activeBookings.filter(booking => 
-          (booking.is_confirmed === 'true' || booking.is_confirmed === true) && 
-          !booking.is_ride_closed && !booking.is_closed
+        return activeBookings.filter(booking =>
+          (booking.is_confirmed === 'true' || booking.is_confirmed === true) &&
+          !booking.is_ride_closed && !booking.is_closed && booking.status !== 'Started'
         );
       case 'pending':
-        return activeBookings.filter(booking => 
-          (booking.is_confirmed === 'false' || booking.is_confirmed === false) && 
+        return activeBookings.filter(booking =>
+          (booking.is_confirmed === 'false' || booking.is_confirmed === false) &&
           !booking.is_ride_closed && !booking.is_closed
         );
       default:
@@ -605,16 +691,16 @@ export default function BookingsScreen() {
 
   const getToggleCount = (mode: string) => {
     const activeBookings = allBookings.filter(booking => !booking.is_ride_closed && !booking.is_closed);
-    
+
     switch (mode) {
       case 'current':
         return activeBookings.filter(booking => booking.status === 'Started').length;
       case 'accepted':
-        return activeBookings.filter(booking => 
-          booking.is_confirmed === 'true' || booking.is_confirmed === true
+        return activeBookings.filter(booking =>
+          booking.is_confirmed === 'true' || booking.is_confirmed === true && booking.status !== 'Started'
         ).length;
       case 'pending':
-        return activeBookings.filter(booking => 
+        return activeBookings.filter(booking =>
           booking.is_confirmed === 'false' || booking.is_confirmed === false
         ).length;
       default:
@@ -627,13 +713,13 @@ export default function BookingsScreen() {
       <View style={styles.bookingHeader}>
         <View style={styles.bookingStatus}>
           <View style={[
-  styles.statusIndicator,
-  { backgroundColor: getStatusColor(booking.is_ride_closed || booking.is_closed, booking.is_confirmed, booking.status) }
-]} />
+            styles.statusIndicator,
+            { backgroundColor: getStatusColor(booking.is_ride_closed || booking.is_closed, booking.is_confirmed, booking.status) }
+          ]} />
 
-<Text style={[styles.statusText, { color: getStatusColor(booking.is_ride_closed || booking.is_closed, booking.is_confirmed, booking.status) }]}>
-  {getStatusText(booking.is_ride_closed || booking.is_closed, booking.is_confirmed, booking.status)} PACKAGE
-</Text>
+          <Text style={[styles.statusText, { color: getStatusColor(booking.is_ride_closed || booking.is_closed, booking.is_confirmed, booking.status) }]}>
+            {getStatusText(booking.is_ride_closed || booking.is_closed, booking.is_confirmed, booking.status)} PACKAGE
+          </Text>
 
         </View>
         <Text style={styles.bookingDate}>
@@ -687,7 +773,7 @@ export default function BookingsScreen() {
           </View>
         )}
         <View style={styles.detailItem}>
-          <Text style={styles.detailText}>₹{booking.pending_payment || booking.total_amount}</Text>
+          <Text style={styles.detailText}>₹{booking.total_amount || "0"}</Text>
         </View>
       </View>
 
@@ -711,7 +797,7 @@ export default function BookingsScreen() {
           <View style={styles.paymentItem}>
             <Text style={styles.paymentLabel}>Amount Pending:</Text>
             <Text style={[styles.paymentAmount, { color: '#EF4444' }]}>
-              ₹{booking.pending_payment || booking.total_amount}
+              ₹{booking.pending_payment || 0}
             </Text>
           </View>
         )}
@@ -766,7 +852,7 @@ export default function BookingsScreen() {
             <Text style={styles.primaryActionText}>Trip Started</Text>
           </TouchableOpacity>
         )}
-        
+
         {booking.is_closed !== "" || booking.is_closed === false && booking.is_confirmed && (
           <TouchableOpacity style={styles.primaryAction}>
             <MaterialCommunityIcons name="car" size={16} color="#ffffff" />
@@ -784,165 +870,202 @@ export default function BookingsScreen() {
     </View>
   );
 
-const renderBookingCard = (booking: Booking) => {
-  // If it's a package booking, use the package card layout
-  // console.log("Rendering booking card for:", booking);
-  if (booking.trip_type === 'package') {
-    return renderPackageBookingCard(booking);
-  }
+  const renderBookingCard = (booking: Booking) => {
+    // If it's a package booking, use the package card layout
+    // console.log("Rendering booking card for:", booking);
+    if (booking.trip_type === 'package') {
+      return renderPackageBookingCard(booking);
+    }
 
-  // Regular booking card for single/round trips
-  return (
-    <View key={String(booking.id)} style={styles.bookingCard}>
-      <View style={styles.bookingHeader}>
-        <View style={styles.bookingStatus}>
-          <View
-            style={[
-              styles.statusIndicator,
-              {
-                backgroundColor: getStatusColor(
-                  booking.is_closed || booking.is_ride_closed,
-                  booking.is_confirmed,
-                  booking.status
-                ),
-              },
-            ]}
-          />
-<Text style={[styles.statusText, { color: getStatusColor(
-  booking.is_ride_closed || booking.is_closed,
-  booking.is_confirmed,
-  booking.status
-) }]}>
-  {getStatusText(
-    booking.is_ride_closed || booking.is_closed,
-    booking.is_confirmed,
-    booking.status
-  )}
-  {booking.round_trip === true || booking.round_trip === 'true' ? ' ROUND TRIP' : ''}
-</Text>
+    // Regular booking card for single/round trips
+    return (
+      <View key={String(booking.id)} style={styles.bookingCard}>
+        <View style={styles.bookingHeader}>
+          <View style={styles.bookingStatus}>
+            <View
+              style={[
+                styles.statusIndicator,
+                {
+                  backgroundColor: getStatusColor(
+                    booking.is_closed || booking.is_ride_closed,
+                    booking.is_confirmed,
+                    booking.status
+                  ),
+                },
+              ]}
+            />
+            <Text style={[styles.statusText, {
+              color: getStatusColor(
+                booking.is_ride_closed || booking.is_closed,
+                booking.is_confirmed,
+                booking.status
+              )
+            }]}>
+              {getStatusText(
+                booking.is_ride_closed || booking.is_closed,
+                booking.is_confirmed,
+                booking.status
+              )}
+              {booking.round_trip === true || booking.round_trip === 'true' ? ' ROUND TRIP' : ''}
+            </Text>
 
 
-        </View>
-        <Text style={styles.bookingDate}>
-          {String(new Date(booking.date_of_travel).toLocaleDateString())}
-        </Text>
-      </View>
-
-      <View style={styles.routeContainer}>
-        <View style={styles.routeItem}>
-          <MaterialCommunityIcons name="map-marker" size={16} color="#10B981" />
-          <Text style={styles.routeText}>
-            {String(booking.start_point || '')}
+          </View>
+          <Text style={styles.bookingDate}>
+            {String(new Date(booking.date_of_travel).toLocaleDateString())}
           </Text>
         </View>
-        <View style={styles.routeLine} />
-        <View style={styles.routeItem}>
-          <MaterialCommunityIcons name="map-marker" size={16} color="#EF4444" />
-          <Text style={styles.routeText}>
-            {String(booking.end_point || '')}
-          </Text>
+
+        <View style={styles.routeContainer}>
+          <View style={styles.routeItem}>
+            <MaterialCommunityIcons name="map-marker" size={16} color="#10B981" />
+            <Text style={styles.routeText}>
+              {String(booking.start_point || '')}
+            </Text>
+          </View>
+          <View style={styles.routeLine} />
+          <View style={styles.routeItem}>
+            <MaterialCommunityIcons name="map-marker" size={16} color="#EF4444" />
+            <Text style={styles.routeText}>
+              {String(booking.end_point || '')}
+            </Text>
+          </View>
+          {booking.round_trip && (
+            <>
+              <View style={styles.routeLine} />
+              <View style={styles.routeItem}>
+                <MaterialCommunityIcons
+                  name="map-marker"
+                  size={16}
+                  color="#10B981"
+                />
+                <Text style={styles.routeText}>
+                  {String(booking.start_point || '')}
+                </Text>
+              </View>
+            </>
+          )}
         </View>
-        {booking.round_trip && (
-          <>
-            <View style={styles.routeLine} />
-            <View style={styles.routeItem}>
+
+        <View style={styles.bookingDetails}>
+          <View style={styles.detailItem}>
+            <MaterialCommunityIcons name="car" size={16} color="#6B7280" />
+            <Text style={styles.detailText}>
+              {String(booking.vehicle_type || '')}
+            </Text>
+          </View>
+          <View style={styles.detailItem}>
+            <Text style={styles.detailText}>
+              ₹{String(booking.total_amount || 0)}
+            </Text>
+          </View>
+          {booking.pickup_time !== "" && (
+            <View style={styles.detailItem}>
               <MaterialCommunityIcons
-                name="map-marker"
+                name="clock-outline"
                 size={16}
-                color="#10B981"
+                color="#6B7280"
               />
-              <Text style={styles.routeText}>
-                {String(booking.start_point || '')}
+              <Text style={styles.detailText}>
+                {String(booking.pickup_time || '')}
               </Text>
             </View>
-          </>
-        )}
-      </View>
+          )}
+        </View>
 
-      <View style={styles.bookingDetails}>
-        <View style={styles.detailItem}>
-          <MaterialCommunityIcons name="car" size={16} color="#6B7280" />
-          <Text style={styles.detailText}>
-            {String(booking.vehicle_type || '')}
-          </Text>
-        </View>
-        <View style={styles.detailItem}>
-          <Text style={styles.detailText}>
-            ₹{String(booking.pending_payment || 0)}
-          </Text>
-        </View>
-        {booking.pickup_time !== "" && (
-          <View style={styles.detailItem}>
-            <MaterialCommunityIcons
-              name="clock-outline"
-              size={16}
-              color="#6B7280"
-            />
-            <Text style={styles.detailText}>
-              {String(booking.pickup_time || '')}
-            </Text>
+        {/* Show driver info for current trips or accepted trips */}
+{(booking.is_confirmed === 'true' || booking.is_confirmed === true) && (
+  <View style={styles.confirmedDriverContainer}>
+    <View style={styles.driverInfoRow}>
+      {/* Driver Info Section (85%) */}
+      <View style={styles.driverInfoSection}>
+        <LinearGradient
+          colors={['#059669', '#10B981', '#34D399']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.driverInfoGradient}
+        >
+          <View style={styles.driverInfoContent}>
+            <View style={styles.driverIcon}>
+              <User size={20} color="#FFFFFF" />
+            </View>
+            <View style={styles.driverTextContainer}>
+              <Text style={styles.driverLabel}>Driver Assigned</Text>
+              <Text style={styles.driverName}>
+                {String(booking?.confirmed_driver_name || 'N/A')}
+              </Text>
+              <View style={styles.carInfoRow}>
+                <Car size={14} color="#D1FAE5" />
+                <Text style={styles.carNumber}>
+                  {String(booking?.confirmed_rc_number || 'N/A')}
+                </Text>
+              </View>
+            </View>
           </View>
-        )}
+        </LinearGradient>
       </View>
 
-      {/* Show driver info for current trips or accepted trips */}
-      {(booking.status === 'Started' ||
-        booking.is_confirmed === 'true' ||
-        booking.is_confirmed === true) &&
-        booking.driver !== "" && (
-          <View style={styles.driverInfo}>
-            <Text style={styles.driverName}>
-              {String(booking.driver?.name || '')}
-            </Text>
-            <Text style={styles.driverDetails}>
-              {String(booking.driver?.carNumber || '')} • ⭐{' '}
-              {String(booking.driver?.rating || '')}
-            </Text>
-            <Text style={styles.driverPhone}>
-              {String(booking.driver?.phone || '')}
-            </Text>
-          </View>
-        )}
+      {/* Gap (2%) */}
+      <View style={styles.gap} />
 
-      {(booking.ride_instructions !== "" || booking.pickupInstructions !== "") && (
-        <View style={styles.instructions}>
-          <Text style={styles.instructionsTitle}>Pickup Instructions:</Text>
-          <Text style={styles.instructionsText}>
-            {String(booking.ride_instructions || booking.pickupInstructions)}
-          </Text>
-        </View>
-      )}
-
-      <View style={styles.paymentInfo}>
-        <View style={styles.paymentItem}>
-          <Text style={styles.paymentLabel}>Amount Paid:</Text>
-          <Text style={[styles.paymentAmount, { color: '#10B981' }]}>
-            ₹{String(booking.advanced_payment || 0)}
-          </Text>
-        </View>
-        {booking.pending_payment > 0 && (
-          <View style={styles.paymentItem}>
-            <Text style={styles.paymentLabel}>Amount Pending:</Text>
-            <Text style={[styles.paymentAmount, { color: '#EF4444' }]}>
-              ₹{String(booking.pending_payment || 0)}
-            </Text>
-          </View>
-        )}
-      </View>
-
-      <View style={styles.bookingActions}>
-        {booking.status === 'Started' && (
-          <TouchableOpacity
-            style={styles.trackButton}
-            onPress={() => router.push('/tracking')}
-          >
-            <Text style={styles.trackButtonText}>Trip Started</Text>
-          </TouchableOpacity>
-        )}
-      </View>
+      {/* Call Button Section (13%) */}
+      <TouchableOpacity
+        style={styles.callButtonSection}
+        onPress={handleDriverCall}
+        activeOpacity={0.8}
+      >
+        <LinearGradient
+          colors={['#1E40AF', '#3B82F6', '#60A5FA']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.callButtonGradient}
+        >
+          <Phone size={18} color="#FFFFFF" />
+        </LinearGradient>
+      </TouchableOpacity>
     </View>
-  );
-};
+  </View>
+)}
+
+        {(booking.ride_instructions !== "" || booking.pickupInstructions !== "") && (
+          <View style={styles.instructions}>
+            <Text style={styles.instructionsTitle}>Pickup Instructions:</Text>
+            <Text style={styles.instructionsText}>
+              {String(booking.ride_instructions || booking.pickupInstructions)}
+            </Text>
+          </View>
+        )}
+
+        <View style={styles.paymentInfo}>
+          <View style={styles.paymentItem}>
+            <Text style={styles.paymentLabel}>Amount Paid:</Text>
+            <Text style={[styles.paymentAmount, { color: '#10B981' }]}>
+              ₹{String(booking.advanced_payment || 0)}
+            </Text>
+          </View>
+          {booking.pending_payment > 0 && (
+            <View style={styles.paymentItem}>
+              <Text style={styles.paymentLabel}>Amount Pending:</Text>
+              <Text style={[styles.paymentAmount, { color: '#EF4444' }]}>
+                ₹{String(booking.pending_payment || 0)}
+              </Text>
+            </View>
+          )}
+        </View>
+
+        <View style={styles.bookingActions}>
+          {booking.status === 'Started' && (
+            <TouchableOpacity
+              style={styles.trackButton}
+              onPress={() => router.push('/tracking')}
+            >
+              <Text style={styles.trackButtonText}>Trip Started</Text>
+            </TouchableOpacity>
+          )}
+        </View>
+      </View>
+    );
+  };
 
 
 
@@ -954,7 +1077,7 @@ const renderBookingCard = (booking: Booking) => {
     return '#6B7280';
   };
 
-  const getStatusText = (closed:any, confirmed: any, status?: string) => {
+  const getStatusText = (closed: any, confirmed: any, status?: string) => {
     if (closed) return 'COMPLETED';
     if (status === 'Started') return 'CURRENT TRIP';
     if (confirmed === 'true' || confirmed === true) return 'CONFIRMED';
@@ -981,151 +1104,160 @@ const renderBookingCard = (booking: Booking) => {
     );
   }
 
-return (
-  <SafeAreaView style={styles.container}>
-    <View style={styles.header}>
-      <Text style={styles.headerTitle}>My Rides</Text>
-      <Text style={styles.headerSubtitle}>Track your current and upcoming rides</Text>
-    </View>
+  
+  
 
-    <LatestOrderCard 
-      fetchLatestBooking={fetchLatestBooking}
-      latestBooking={latestBooking}
-      latestBookingType={latestBookingType}
-      onRefresh={onRefresh}
-      refreshing={refreshing}
-    />
-
-    <View style={styles.toggleContainer}>
-      <TouchableOpacity
-        style={[
-          styles.toggleButton,
-          viewMode === 'current' ? styles.activeToggle : styles.inactiveToggle
-        ]}
-        onPress={() => setViewMode('current')}
-      >
-        <Text style={[
-          styles.toggleText,
-          viewMode === 'current' ? styles.activeToggleText : styles.inactiveToggleText
-        ]}>
-          Current Trip ({getToggleCount('current')})
-        </Text>
-      </TouchableOpacity>
-      
-      <TouchableOpacity
-        style={[
-          styles.toggleButton,
-          viewMode === 'accepted' ? styles.activeToggle : styles.inactiveToggle
-        ]}
-        onPress={() => setViewMode('accepted')}
-      >
-        <Text style={[
-          styles.toggleText,
-          viewMode === 'accepted' ? styles.activeToggleText : styles.inactiveToggleText
-        ]}>
-          Driver Accepted ({getToggleCount('accepted')})
-        </Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity
-        style={[
-          styles.toggleButton,
-          viewMode === 'pending' ? styles.activeToggle : styles.inactiveToggle
-        ]}
-        onPress={() => setViewMode('pending')}
-      >
-        <Text style={[
-          styles.toggleText,
-          viewMode === 'pending' ? styles.activeToggleText : styles.inactiveToggleText
-        ]}>
-          Yet to Accept ({getToggleCount('pending')})
-        </Text>
-      </TouchableOpacity>
-    </View>
-
-    <ScrollView
-      style={styles.content}
-      refreshControl={
-        <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
-      }
-      showsVerticalScrollIndicator={false}
-    >
-      {filteredBookings.length === 0 ? (
-        <View style={styles.emptyState}>
-          <Text style={styles.emptyStateTitle}>
-            {viewMode === 'current' ? "No Current Trips" : null}
-            {viewMode === 'accepted' ? "No Driver Accepted Trips" : null}
-            {viewMode === 'pending' ? "No Pending Trips" : null}
-          </Text>
-          <Text style={styles.emptyStateText}>
-            {viewMode === 'current' ? "You don't have any ongoing rides" : null}
-            {viewMode === 'accepted' ? "No confirmed rides by drivers yet" : null}
-            {viewMode === 'pending' ? "No trips waiting for driver acceptance" : null}
-          </Text>
-          <TouchableOpacity
-            style={styles.bookButton}
-            onPress={() => router.push('/booking/location')}
-          >
-            <Text style={styles.bookButtonText}>Book a Ride</Text>
-          </TouchableOpacity>
-        </View>
-      ) : (
-        filteredBookings.map(renderBookingCard)
-      )}
-    </ScrollView>
-
-    <Modal
-      visible={showInstructionsModal}
-      animationType="slide"
-      transparent={true}
-      onRequestClose={handleCancelInstructions}
-    >
-      <View style={styles.modalOverlay}>
-        <View style={styles.modalContent}>
-          <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Edit Pickup Instructions</Text>
-            <TouchableOpacity
-              style={styles.closeButton}
-              onPress={handleCancelInstructions}
-            >
-              <MaterialCommunityIcons name="close" size={24} color="#6B7280" />
-            </TouchableOpacity>
-          </View>
-
-          <Text style={styles.modalSubtitle}>
-            Add specific instructions for the driver to find you easily
-          </Text>
-
-          <TextInput
-            style={styles.textArea}
-            placeholder="e.g., I'll be waiting near the main gate, wearing a blue shirt..."
-            value={instructionsText}
-            onChangeText={setInstructionsText}
-            multiline={true}
-            numberOfLines={6}
-            textAlignVertical="top"
-          />
-
-          <View style={styles.modalActions}>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={handleCancelInstructions}
-            >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
-            </TouchableOpacity>
-            
-            <TouchableOpacity
-              style={styles.saveButton}
-              onPress={handleSaveInstructions}
-            >
-              <Text style={styles.saveButtonText}>Save Instructions</Text>
-            </TouchableOpacity>
-          </View>
-        </View>
+  return (
+    <SafeAreaView style={styles.container}>
+      <View style={styles.header}>
+        <Text style={styles.headerTitle}>My Rides</Text>
+        <Text style={styles.headerSubtitle}>Track your current and upcoming rides</Text>
       </View>
-    </Modal>
-  </SafeAreaView>
-);
+
+      <LatestOrderCard
+        fetchLatestBooking={fetchLatestBooking}
+        latestBooking={latestBooking}
+        latestBookingType={latestBookingType}
+        onRefresh={onRefresh}
+        refreshing={refreshing}
+      />
+
+      <View style={styles.toggleContainer}>
+        <TouchableOpacity
+          style={[
+            styles.toggleButton,
+            viewMode === 'current' ? styles.activeToggle : styles.inactiveToggle
+          ]}
+          onPress={() => setViewMode('current')}
+        >
+          <Text style={[
+            styles.toggleText,
+            viewMode === 'current' ? styles.activeToggleText : styles.inactiveToggleText
+          ]}>
+            Current Trip ({getToggleCount('current')})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.toggleButton,
+            viewMode === 'accepted' ? styles.activeToggle : styles.inactiveToggle
+          ]}
+          onPress={() => setViewMode('accepted')}
+        >
+          <Text style={[
+            styles.toggleText,
+            viewMode === 'accepted' ? styles.activeToggleText : styles.inactiveToggleText
+          ]}>
+            Driver Accepted ({getToggleCount('accepted')})
+          </Text>
+        </TouchableOpacity>
+
+        <TouchableOpacity
+          style={[
+            styles.toggleButton,
+            viewMode === 'pending' ? styles.activeToggle : styles.inactiveToggle
+          ]}
+          onPress={() => setViewMode('pending')}
+        >
+          <Text style={[
+            styles.toggleText,
+            viewMode === 'pending' ? styles.activeToggleText : styles.inactiveToggleText
+          ]}>
+            Yet to Accept ({getToggleCount('pending')})
+          </Text>
+        </TouchableOpacity>
+      </View>
+
+      <ScrollView
+        style={styles.content}
+        refreshControl={
+          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+        }
+        showsVerticalScrollIndicator={false}
+      >
+        {filteredBookings.length === 0 ? (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateTitle}>
+              {viewMode === 'current' ? "No Current Trips" : null}
+              {viewMode === 'accepted' ? "No Driver Accepted Trips" : null}
+              {viewMode === 'pending' ? "No Pending Trips" : null}
+            </Text>
+            <Text style={styles.emptyStateText}>
+              {viewMode === 'current' ? "You don't have any ongoing rides" : null}
+              {viewMode === 'accepted' ? "No confirmed rides by drivers yet" : null}
+              {viewMode === 'pending' ? "No trips waiting for driver acceptance" : null}
+            </Text>
+            <TouchableOpacity
+              style={styles.bookButton}
+              onPress={() => router.push('/booking/location')}
+            >
+              <Text style={styles.bookButtonText}>Book a Ride</Text>
+            </TouchableOpacity>
+          </View>
+        ) : (
+          filteredBookings.map(renderBookingCard)
+        )}
+      </ScrollView>
+
+      <Modal
+        visible={showInstructionsModal}
+        animationType="slide"
+        transparent={true}
+        onRequestClose={handleCancelInstructions}
+      >
+        <View style={styles.modalOverlay}>
+          <View style={styles.modalContent}>
+            <View style={styles.modalHeader}>
+              <Text style={styles.modalTitle}>Edit Pickup Instructions</Text>
+              <TouchableOpacity
+                style={styles.closeButton}
+                onPress={handleCancelInstructions}
+              >
+                <MaterialCommunityIcons name="close" size={24} color="#6B7280" />
+              </TouchableOpacity>
+            </View>
+
+            <Text style={styles.modalSubtitle}>
+              Add specific instructions for the driver to find you easily
+            </Text>
+
+            <TextInput
+              style={styles.textArea}
+              placeholder="e.g., I'll be waiting near the main gate, wearing a blue shirt..."
+              value={instructionsText}
+              onChangeText={setInstructionsText}
+              multiline={true}
+              numberOfLines={6}
+              textAlignVertical="top"
+            />
+
+            <View style={styles.modalActions}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={handleCancelInstructions}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={styles.saveButton}
+                onPress={handleSaveInstructions}
+              >
+                <Text style={styles.saveButtonText}>Save Instructions</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
+
+      <TaxiLoading 
+        visible={isLoading} 
+        loadingText="Finding your ride..." 
+      />
+
+    </SafeAreaView>
+  );
 
 }
 
@@ -1449,12 +1581,6 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     marginBottom: 12,
   },
-  driverName: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: '#065F46',
-    marginBottom: 2,
-  },
   driverDetails: {
     fontSize: 12,
     color: '#059669',
@@ -1630,4 +1756,94 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  confirmedDriverContainer: {
+    marginVertical: 12,
+    marginHorizontal: 16,
+  },
+  driverInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    height: 70,
+  },
+  driverInfoSection: {
+    flex: 0.85, // 85% width
+    height: '100%',
+  },
+  driverInfoGradient: {
+    height: '100%',
+    borderTopLeftRadius: 16,
+    borderBottomLeftRadius: 16,
+    paddingHorizontal: 16,
+    justifyContent: 'center',
+    shadowColor: '#059669',
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+  },
+  driverInfoContent: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  driverIcon: {
+    width: 36,
+    height: 36,
+    backgroundColor: '#FFFFFF20',
+    borderRadius: 18,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  driverTextContainer: {
+    flex: 1,
+    marginLeft: 12,
+  },
+  driverLabel: {
+    fontSize: 10,
+    color: '#D1FAE5',
+    fontWeight: '500',
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+    marginBottom: 2,
+  },
+  driverName: {
+    fontSize: 16,
+    fontWeight: 'bold',
+    color: '#FFFFFF',
+    marginBottom: 2,
+  },
+  carInfoRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
+  carNumber: {
+    fontSize: 12,
+    color: '#D1FAE5',
+    marginLeft: 4,
+    fontWeight: '500',
+  },
+  gap: {
+    flex: 0.02, // 2% gap
+  },
+  callButtonSection: {
+    flex: 0.13, // 13% width
+    height: '100%',
+  },
+  callButtonGradient: {
+    height: '100%',
+    borderTopRightRadius: 16,
+    borderBottomRightRadius: 16,
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#3B82F6',
+    shadowOffset: {
+      width: 0,
+      height: 3,
+    },
+    shadowOpacity: 0.3,
+    shadowRadius: 6,
+    elevation: 5,
+  }
 });

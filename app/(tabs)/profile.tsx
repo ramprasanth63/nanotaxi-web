@@ -5,15 +5,14 @@ import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Linking,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
   View,
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, isLoggedIn, logout } = useAuth();
