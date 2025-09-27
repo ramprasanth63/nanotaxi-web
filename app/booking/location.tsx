@@ -19,6 +19,8 @@ import {
 // import DateTimePickerModal from 'react-native-modal-datetime-picker';
 import HireDriverButton from '@/components/HireDriverButton';
 import LocationInputModal from '@/components/LocationInputModal';
+import TaxiLoading from '@/components/TaxiLoading';
+import { useAuth } from '@/contexts/AuthContext';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -55,7 +57,7 @@ export default function LocationScreen() {
   const [searchLoading, setSearchLoading] = useState(false);
   const [editingStartLocation, setEditingStartLocation] = useState(false);
   const [editingDestination, setEditingDestination] = useState(false);
-
+  const { isLoggedIn, user } = useAuth();
   const [showPickupModal, setShowPickupModal] = useState(false);
   const [showDestinationModal, setShowDestinationModal] = useState(false);
   const [showStartLocationModal, setShowStartLocationModal] = useState(false);
@@ -472,7 +474,7 @@ export default function LocationScreen() {
     setBookingLoading(true);
     try {
       const payload = {
-        customer_id: 1, // You might want to get this from user context/storage
+        customer_id: user.customer_id, // You might want to get this from user context/storage
         vehicle_type: selectedPackage.vehicle_model,
         total_hours_booked: selectedHours,
         total_km_booked: calculatedKm,
@@ -532,12 +534,10 @@ export default function LocationScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#10B981" />
-          <Text style={styles.loadingText}>Getting your location...</Text>
-        </View>
-      </SafeAreaView>
+  <TaxiLoading 
+        visible={true} 
+        loadingText="Getting your location..." 
+      />
     );
   }
 

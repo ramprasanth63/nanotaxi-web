@@ -481,13 +481,31 @@ export default function BookingsScreen() {
   const [isLoading, setIsLoading] = useState(true);
 
   useEffect(() => {
-    if (isLoggedIn) {
-      fetchConfirmedBookings();
-      fetchPackageBookings();
-      fetchLatestBooking();
-    }
-    setIsLoading(false);
-  }, [isLoggedIn]);
+    const loadInitialData = async () => {
+      if (isLoggedIn && user?.customer_id) {
+        setIsLoading(true);
+        console.log("Starting to load initial data...");
+        
+        try {
+          await Promise.all([
+            fetchConfirmedBookings(),
+            fetchPackageBookings(),
+            fetchLatestBooking()
+          ]);
+          console.log("All initial data loaded successfully");
+        } catch (error) {
+          console.error("Error loading initial data:", error);
+        } finally {
+          setIsLoading(false);
+          console.log("Initial loading completed");
+        }
+      } else {
+        setIsLoading(false);
+      }
+    };
+
+    loadInitialData();
+  }, [isLoggedIn, user?.customer_id]);
 
 
   const fetchPackageBookings = async () => {
@@ -521,12 +539,17 @@ export default function BookingsScreen() {
   const onRefresh = async () => {
     console.log("Refreshing bookings...");
     setRefreshing(true);
-    await Promise.all([
-      fetchLatestBooking(),
-      fetchConfirmedBookings(),
-      fetchPackageBookings()
-    ]);
-    setRefreshing(false);
+    try {
+      await Promise.all([
+        fetchLatestBooking(),
+        fetchConfirmedBookings(),
+        fetchPackageBookings()
+      ]);
+    } catch (error) {
+      console.error("Error during refresh:", error);
+    } finally {
+      setRefreshing(false);
+    }
   };
 
 
@@ -776,6 +799,62 @@ export default function BookingsScreen() {
           <Text style={styles.detailText}>₹{booking.total_amount || "0"}</Text>
         </View>
       </View>
+
+
+        {(booking.is_confirmed === 'true' || booking.is_confirmed === true) && (
+  <View style={styles.confirmedDriverContainer}>
+    <View style={styles.driverInfoRow}>
+      {/* Driver Info Section (85%) */}
+      <View style={styles.driverInfoSection}>
+        <LinearGradient
+          colors={['#059669', '#10B981', '#34D399']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.driverInfoGradient}
+        >
+          <View style={styles.driverInfoContent}>
+            <View style={styles.driverIcon}>
+              <User size={20} color="#FFFFFF" />
+            </View>
+            <View style={styles.driverTextContainer}>
+              <Text style={styles.driverLabel}>Driver Assigned</Text>
+              <Text style={styles.driverName}>
+                {String(booking?.confirmed_driver_full_name || 'N/A')}
+              </Text>
+              <View style={styles.carInfoRow}>
+                <Car size={14} color="#D1FAE5" />
+                <Text style={styles.carNumber}>
+                  {String(booking?.confirmed_driver_rcnumber || 'N/A')}
+                </Text>
+              </View>
+            </View>
+          </View>
+        </LinearGradient>
+      </View>
+
+      {/* Gap (2%) */}
+      <View style={styles.gap} />
+
+      {/* Call Button Section (13%) */}
+      <TouchableOpacity
+        style={styles.callButtonSection}
+        onPress={handleDriverCall}
+        activeOpacity={0.8}
+      >
+        <LinearGradient
+          colors={['#1E40AF', '#3B82F6', '#60A5FA']}
+          start={{ x: 0, y: 0 }}
+          end={{ x: 1, y: 1 }}
+          style={styles.callButtonGradient}
+        >
+          <Phone size={18} color="#FFFFFF" />
+        </LinearGradient>
+      </TouchableOpacity>
+    </View>
+  </View>
+)}
+
+
 
       {booking.special_instructions !== '' && (
         <View style={styles.instructions}>
@@ -1104,8 +1183,14 @@ export default function BookingsScreen() {
     );
   }
 
-  
-  
+  if (isLoading) {
+    return (
+      <TaxiLoading 
+        visible={true} 
+        loadingText="Loading your bookings..." 
+      />
+    );
+  }
 
   return (
     <SafeAreaView style={styles.container}>
@@ -1251,16 +1336,9 @@ export default function BookingsScreen() {
         </View>
       </Modal>
 
-      <TaxiLoading 
-        visible={isLoading} 
-        loadingText="Finding your ride..." 
-      />
-
     </SafeAreaView>
   );
-
 }
-
 // Add these missing styles to your existing styles object
 const styles = StyleSheet.create({
   container: {

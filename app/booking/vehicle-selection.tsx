@@ -1,18 +1,18 @@
+import TaxiLoading from '@/components/TaxiLoading';
 import { apiPost, fetchBaseURL } from '@/services/apiClient';
 import { Location, Vehicle } from '@/types';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
-  ActivityIndicator,
   Image,
-  SafeAreaView,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 // Use the ORS Matrix API for real driving distance calculation
 const OPENROUTESERVICE_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImY3MDRkYTQ3MWYxNDRiMTdiODBiMGViNzQwZTZiY2NjIiwiaCI6Im11cm11cjY0In0=";
@@ -236,12 +236,10 @@ export default function VehicleSelectionScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.loadingContainer}>
-          <ActivityIndicator size="large" color="#10B981" />
-          <Text style={styles.loadingText}>Loading vehicles...</Text>
-        </View>
-      </SafeAreaView>
+     <TaxiLoading 
+        visible={true} 
+        loadingText="Loading vehicles..." 
+      />
     );
   }
 

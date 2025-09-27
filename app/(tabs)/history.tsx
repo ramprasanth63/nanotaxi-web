@@ -1,3 +1,4 @@
+import TaxiLoading from '@/components/TaxiLoading';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBooking } from '@/contexts/BookingContext';
 import { apiGet } from '@/services/apiClient';
@@ -5,14 +6,13 @@ import { Booking } from '@/types';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  ActivityIndicator,
   Alert,
   RefreshControl,
   ScrollView,
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -378,11 +378,10 @@ export default function HistoryScreen() {
 
   if (loading) {
     return (
-      <SafeAreaView style={styles.container}>
-        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center' }}>
-          <ActivityIndicator size="large" color="#10B981" />
-        </View>
-      </SafeAreaView>
+    <TaxiLoading
+        visible={true} 
+        loadingText="Loading your history..." 
+      />
     );
   }
 
