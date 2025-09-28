@@ -1,26 +1,34 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { apiPost } from '@/services/apiClient';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
-  KeyboardAvoidingView,
+  Animated,
+  Dimensions,
+  findNodeHandle,
+  Keyboard,
   Modal,
   Platform,
+  ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
   TouchableOpacity,
-  View,
+  UIManager,
+  View
 } from 'react-native';
+import { KeyboardAwareScrollView } from "react-native-keyboard-aware-scroll-view";
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-
 interface AuthPopupProps {
   visible: boolean;
   onClose: () => void;
   onLoginSuccess: (customerId: string) => void;
   onGuestContinue: () => void;
 }
+
+const { height: screenHeight, width: screenWidth } = Dimensions.get('window');
 
 export default function AuthPopup({ visible, onClose, onLoginSuccess, onGuestContinue }: AuthPopupProps) {
   const [isSignup, setIsSignup] = useState(false);
@@ -36,12 +44,96 @@ export default function AuthPopup({ visible, onClose, onLoginSuccess, onGuestCon
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [loading, setLoading] = useState(false);
-  const [guestMode, setGuestMode] = useState(false);
-  const [guestContact, setGuestContact] = useState('');
-  const [guestContactType, setGuestContactType] = useState<'email' | 'mobile'>('email');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [keyboardHeight, setKeyboardHeight] = useState(0);
+  
+  const scrollViewRef = useRef<ScrollView>(null);
+  const fadeAnim = useRef(new Animated.Value(0)).current;
+  const slideAnim = useRef(new Animated.Value(screenHeight)).current;
+  
   const { login } = useAuth();
 
-  React.useEffect(() => {
+  
+
+useEffect(() => {
+  const keyboardDidShow = (e: any) => {
+    const keyboardHeight = e.endCoordinates.height;
+
+    const currentlyFocusedField = TextInput.State.currentlyFocusedInput?.();
+    const scrollHandle = findNodeHandle(scrollViewRef.current);
+    const inputHandle = findNodeHandle(currentlyFocusedField);
+
+    if (inputHandle && scrollHandle) {
+      UIManager.measureLayout(
+        inputHandle,
+        scrollHandle,
+        (error: any) => console.warn("measureLayout failed", error),
+        (x: number, y: number, w: number, h: number) => {
+          const screenHeight = Dimensions.get("window").height;
+          const fieldBottom = y + h;
+          const keyboardTop = screenHeight - keyboardHeight;
+
+          if (fieldBottom > keyboardTop) {
+            const scrollOffset = fieldBottom - keyboardTop + 20; // add padding
+            scrollViewRef.current?.scrollTo({ y: scrollOffset, animated: true });
+          }
+        }
+      );
+    }
+  };
+
+  const keyboardDidHide = () => {
+    // optional: reset scroll position if needed
+  };
+
+  const showSub = Keyboard.addListener("keyboardDidShow", keyboardDidShow);
+  const hideSub = Keyboard.addListener("keyboardDidHide", keyboardDidHide);
+
+  return () => {
+    showSub.remove();
+    hideSub.remove();
+  };
+}, []);
+
+
+
+  // Simple show/hide animation
+  useEffect(() => {
+    if (visible) {
+      slideAnim.setValue(screenHeight);
+      fadeAnim.setValue(0);
+      
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: screenHeight * 0.08, // Change from 0.1 to 0.08 (shows 92% of screen)
+          duration: 300,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 1,
+          duration: 300,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    } else {
+      Animated.parallel([
+        Animated.timing(slideAnim, {
+          toValue: screenHeight,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+        Animated.timing(fadeAnim, {
+          toValue: 0,
+          duration: 250,
+          useNativeDriver: true,
+        }),
+      ]).start();
+    }
+  }, [visible]);
+
+  // Resend timer effect
+  useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
     if (otpSent && resendTimer > 0) {
       timer = setTimeout(() => setResendTimer(resendTimer - 1), 1000);
@@ -65,15 +157,18 @@ export default function AuthPopup({ visible, onClose, onLoginSuccess, onGuestCon
     setPassword('');
     setConfirmPassword('');
     setLoading(false);
-    setGuestMode(false);
-    setGuestContact('');
-    setGuestContactType('email');
+    setShowPassword(false);
+    setShowConfirmPassword(false);
   };
 
   const handleClose = () => {
     resetState();
     onClose();
   };
+
+// const scrollToInput = () => {
+
+// };
 
   const handleSendOtp = async () => {
     if (authMethod === 'email' && !email.trim()) {
@@ -96,6 +191,7 @@ export default function AuthPopup({ visible, onClose, onLoginSuccess, onGuestCon
         setOtpSent(true);
         setResendTimer(30);
         setCanResend(false);
+        // scrollToInput();
       }
     } catch (error) {
       Alert.alert('Error', 'Failed to send OTP');
@@ -120,6 +216,7 @@ export default function AuthPopup({ visible, onClose, onLoginSuccess, onGuestCon
       if (response.data.status === 'success' && response.data.temp_key) {
         setOtpVerified(true);
         setTempKey(response.data.temp_key);
+        // scrollToInput();
       } else {
         setOtpVerified(false);
         setTempKey('');
@@ -190,7 +287,7 @@ export default function AuthPopup({ visible, onClose, onLoginSuccess, onGuestCon
       const contact = authMethod === 'email' ? email : (mobile.startsWith('+91') ? mobile : `+91${mobile}`);
       const success = await login(contact, password);
       if (success) {
-        onLoginSuccess(''); // Customer ID will be available from auth context
+        onLoginSuccess('');
         handleClose();
       } else {
         Alert.alert('Error', 'Login failed');
@@ -202,337 +299,382 @@ export default function AuthPopup({ visible, onClose, onLoginSuccess, onGuestCon
     }
   };
 
-  // const handleGuestLogin = async () => {
-  //   if (!guestContact.trim()) {
-  //     Alert.alert('Error', 'Please enter your email or mobile number');
-  //     return;
-  //   }
-
-  //   setLoading(true);
-  //   try {
-  //     let contact = guestContact.trim();
-  //     let type = guestContactType;
-
-  //     // Auto-detect if it's email or mobile
-  //     if (contact.includes('@')) {
-  //       type = 'email';
-  //     } else {
-  //       type = 'mobile';
-  //       if (!contact.startsWith('+91')) {
-  //         contact = `+91${contact}`;
-  //       }
-  //     }
-
-  //     const response = await apiPost('/api/create_social_user/', {
-  //       contact,
-  //       type,
-  //     });
-
-  //     if (response.data.status === 'success') {
-  //       onLoginSuccess(response.data.customer_id.toString());
-  //       handleClose();
-  //     } else {
-  //       Alert.alert('Error', response.data.message || 'Failed to create guest account');
-  //     }
-  //   } catch (error) {
-  //     Alert.alert('Error', 'Failed to create guest account');
-  //   } finally {
-  //     setLoading(false);
-  //   }
-  // };
-
-  // if (guestMode) {
-  //   return (
-  //     <Modal visible={visible} animationType="slide" transparent>
-  //       <View style={styles.overlay}>
-  //         <KeyboardAvoidingView
-  //           style={styles.container}
-  //           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-  //         >
-  //           <View style={styles.popup}>
-  //             <View style={styles.header}>
-  //               <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-  //                 <MaterialCommunityIcons name="close" size={24} color="#6B7280" />
-  //               </TouchableOpacity>
-  //               <Text style={styles.title}>Continue as Guest</Text>
-  //             </View>
-
-  //             <Text style={styles.subtitle}>Enter your contact details to continue</Text>
-
-  //             <View style={styles.form}>
-  //               <View style={styles.methodToggle}>
-  //                 <TouchableOpacity
-  //                   style={[styles.methodButton, guestContactType === 'email' && styles.activeMethodButton]}
-  //                   onPress={() => setGuestContactType('email')}
-  //                 >
-  //                   <Text style={[styles.methodButtonText, guestContactType === 'email' && styles.activeMethodButtonText]}>
-  //                     Email
-  //                   </Text>
-  //                 </TouchableOpacity>
-  //                 <TouchableOpacity
-  //                   style={[styles.methodButton, guestContactType === 'mobile' && styles.activeMethodButton]}
-  //                   onPress={() => setGuestContactType('mobile')}
-  //                 >
-  //                   <Text style={[styles.methodButtonText, guestContactType === 'mobile' && styles.activeMethodButtonText]}>
-  //                     Mobile
-  //                   </Text>
-  //                 </TouchableOpacity>
-  //               </View>
-
-  //               <TextInput
-  //                 style={styles.input}
-  //                 placeholder={guestContactType === 'email' ? 'Enter your email' : 'Enter your mobile number'}
-  //                 value={guestContact}
-  //                 onChangeText={setGuestContact}
-  //                 keyboardType={guestContactType === 'email' ? 'email-address' : 'phone-pad'}
-  //                 autoCapitalize="none"
-  //               />
-
-  //               <TouchableOpacity
-  //                 style={[styles.authButton, loading && styles.disabledButton]}
-  //                 onPress={handleGuestLogin}
-  //                 disabled={loading}
-  //               >
-  //                 {loading ? (
-  //                   <ActivityIndicator color="#ffffff" />
-  //                 ) : (
-  //                   <Text style={styles.authButtonText}>Continue as Guest</Text>
-  //                 )}
-  //               </TouchableOpacity>
-
-  //               <TouchableOpacity
-  //                 style={styles.switchButton}
-  //                 onPress={() => setGuestMode(false)}
-  //               >
-  //                 <Text style={styles.switchButtonText}>Back to Login/Signup</Text>
-  //               </TouchableOpacity>
-  //             </View>
-  //           </View>
-  //         </KeyboardAvoidingView>
-  //       </View>
-  //     </Modal>
-  //   );
-  // }
+  const renderPasswordInput = (
+    value: string,
+    onChangeText: (text: string) => void,
+    placeholder: string,
+    showPassword: boolean,
+    toggleShowPassword: () => void
+  ) => (
+    <View style={styles.passwordInputContainer}>
+      <TextInput
+        style={styles.passwordInput}
+        placeholder={placeholder}
+        value={value}
+        onChangeText={onChangeText}
+        secureTextEntry={!showPassword}
+        placeholderTextColor="#9CA3AF"
+        // onFocus={scrollToInput}
+      />
+      <TouchableOpacity
+        style={styles.eyeIcon}
+        onPress={toggleShowPassword}
+        activeOpacity={0.7}
+      >
+        <MaterialCommunityIcons
+          name={showPassword ? 'eye' : 'eye-off'}
+          size={20}
+          color="#6B7280"
+        />
+      </TouchableOpacity>
+    </View>
+  );
 
   return (
-    <Modal visible={visible} animationType="slide" transparent>
-      <View style={styles.overlay}>
-        <KeyboardAvoidingView
-          style={styles.container}
-          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-        >
-          <View style={styles.popup}>
-            <View style={styles.header}>
-              <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-                <MaterialCommunityIcons name="close" size={24} color="#6B7280" />
-              </TouchableOpacity>
-              <Text style={styles.title}>
-                {isSignup ? 'Create Account' : 'Login to Continue'}
-              </Text>
+    <Modal 
+      visible={visible} 
+      animationType="slide" 
+      transparent
+      statusBarTranslucent
+      onRequestClose={handleClose}
+    >
+      <StatusBar backgroundColor="rgba(0, 0, 0, 0.7)" barStyle="light-content" />
+      <Animated.View style={[styles.overlay, { opacity: fadeAnim }]}>
+        <TouchableOpacity 
+          style={styles.overlayTouchable}
+          onPress={handleClose}
+          activeOpacity={1}
+        />
+        
+
+          <Animated.View
+            style={[
+              styles.modalContainer,
+              {
+                transform: [{ translateY: slideAnim }],
+                marginBottom: Platform.OS === 'android' ? keyboardHeight : 0,
+              }
+            ]}
+          >
+            {/* Drag Handle */}
+
+                   <KeyboardAwareScrollView
+      style={{ flex: 1 }}
+      contentContainerStyle={{ flexGrow: 1, padding: 20 }}
+      enableOnAndroid={true}
+      extraScrollHeight={20} // adds spacing above keyboard
+    >
+            <View style={styles.dragHandle}>
+              <View style={styles.handleBar} />
             </View>
-
-            <Text style={styles.subtitle}>
-              {isSignup ? 'Sign up to book your ride' : 'Login to proceed with booking'}
-            </Text>
-
-            <View style={styles.form}>
-              {/* Auth Method Toggle */}
-              <View style={styles.methodToggle}>
-                <TouchableOpacity
-                  style={[styles.methodButton, authMethod === 'email' && styles.activeMethodButton]}
-                  onPress={() => setAuthMethod('email')}
-                >
-                  <Text style={[styles.methodButtonText, authMethod === 'email' && styles.activeMethodButtonText]}>
-                    Email
-                  </Text>
-                </TouchableOpacity>
-                <TouchableOpacity
-                  style={[styles.methodButton, authMethod === 'mobile' && styles.activeMethodButton]}
-                  onPress={() => setAuthMethod('mobile')}
-                >
-                  <Text style={[styles.methodButtonText, authMethod === 'mobile' && styles.activeMethodButtonText]}>
-                    Mobile
-                  </Text>
-                </TouchableOpacity>
-              </View>
-
-              {/* Email or Mobile Input */}
-              {authMethod === 'email' ? (
-                <TextInput
-                  style={styles.input}
-                  placeholder="Email"
-                  value={email}
-                  onChangeText={setEmail}
-                  keyboardType="email-address"
-                  autoCapitalize="none"
-                />
-              ) : (
-                <View style={styles.mobileInputContainer}>
-                  <View style={styles.countryCode}>
-                    <Text style={styles.countryCodeText}>+91</Text>
+          
+            <ScrollView
+              ref={scrollViewRef}
+              style={styles.scrollView}
+              contentContainerStyle={styles.scrollContent}
+              showsVerticalScrollIndicator={false}
+              keyboardShouldPersistTaps="handled"
+            >
+              <View style={styles.popup}>
+                {/* Header */}
+                <View style={styles.header}>
+                  <View style={styles.headerContent}>
+                    <Text style={styles.title}>
+                      {isSignup ? 'Create Account' : 'Welcome Back'}
+                    </Text>
+                    <Text style={styles.subtitle}>
+                      {isSignup ? 'Sign up to book your ride' : 'Login to proceed with booking'}
+                    </Text>
                   </View>
-                  <TextInput
-                    style={[styles.input, styles.mobileInput]}
-                    placeholder="Mobile Number"
-                    value={mobile}
-                    onChangeText={setMobile}
-                    keyboardType="phone-pad"
-                    maxLength={10}
-                  />
+                  <TouchableOpacity 
+                    onPress={handleClose} 
+                    style={styles.closeButton}
+                    activeOpacity={0.7}
+                  >
+                    <MaterialCommunityIcons name="close" size={24} color="#6B7280" />
+                  </TouchableOpacity>
                 </View>
-              )}
 
-              {/* Signup Flow */}
-              {isSignup && !otpSent && (
-                <TouchableOpacity
-                  style={[styles.authButton, loading && styles.disabledButton]}
-                  onPress={handleSendOtp}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#ffffff" />
-                  ) : (
-                    <Text style={styles.authButtonText}>Send OTP</Text>
-                  )}
-                </TouchableOpacity>
-              )}
-
-              {isSignup && otpSent && (
-                <>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Enter OTP"
-                    value={otp}
-                    onChangeText={setOtp}
-                    keyboardType="number-pad"
-                    maxLength={6}
-                    editable={!otpVerified}
-                  />
-                  <View style={styles.otpButtons}>
+                <View style={styles.form}>
+                  {/* Auth Method Toggle */}
+                  <View style={styles.methodToggle}>
                     <TouchableOpacity
                       style={[
-                        styles.otpButton,
-                        otpVerified ? styles.verifiedButton : styles.pendingButton,
-                        loading && styles.disabledButton
+                        styles.methodButton, 
+                        authMethod === 'email' && styles.activeMethodButton
                       ]}
-                      onPress={otpVerified ? undefined : handleVerifyOtp}
-                      disabled={otpVerified || loading}
+                      onPress={() => setAuthMethod('email')}
+                      activeOpacity={0.7}
                     >
-                      {loading ? (
-                        <ActivityIndicator color="#ffffff" size="small" />
-                      ) : (
-                        <Text style={[styles.authButtonText, !otpVerified && styles.pendingButtonText]}>
-                          {otpVerified ? 'Verified ✓' : 'Verify OTP'}
-                        </Text>
-                      )}
+                      <MaterialCommunityIcons 
+                        name="email-outline" 
+                        size={18} 
+                        color={authMethod === 'email' ? '#ffffff' : '#6B7280'} 
+                        style={styles.methodIcon}
+                      />
+                      <Text style={[
+                        styles.methodButtonText, 
+                        authMethod === 'email' && styles.activeMethodButtonText
+                      ]}>
+                        Email
+                      </Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       style={[
-                        styles.otpButton,
-                        canResend ? styles.authButton : styles.disabledButton,
-                        loading && styles.disabledButton
+                        styles.methodButton, 
+                        authMethod === 'mobile' && styles.activeMethodButton
                       ]}
-                      onPress={canResend ? handleSendOtp : undefined}
-                      disabled={!canResend || otpVerified || loading}
+                      onPress={() => setAuthMethod('mobile')}
+                      activeOpacity={0.7}
                     >
-                      {loading ? (
-                        <ActivityIndicator color="#ffffff" size="small" />
-                      ) : (
-                        <Text style={styles.authButtonText}>
-                          {canResend ? 'Resend OTP' : `Resend (${resendTimer}s)`}
-                        </Text>
-                      )}
+                      <MaterialCommunityIcons 
+                        name="phone-outline" 
+                        size={18} 
+                        color={authMethod === 'mobile' ? '#ffffff' : '#6B7280'} 
+                        style={styles.methodIcon}
+                      />
+                      <Text style={[
+                        styles.methodButtonText, 
+                        authMethod === 'mobile' && styles.activeMethodButtonText
+                      ]}>
+                        Mobile
+                      </Text>
                     </TouchableOpacity>
                   </View>
 
-                  {otpVerified && (
+                  {/* Email or Mobile Input */}
+                  {authMethod === 'email' ? (
+                    <View style={styles.inputContainer}>
+                      <MaterialCommunityIcons 
+                        name="email-outline" 
+                        size={20} 
+                        color="#6B7280" 
+                        style={styles.inputIcon}
+                      />
+                      <TextInput
+                        style={styles.input}
+                        placeholder="Enter your email"
+                        value={email}
+                        onChangeText={setEmail}
+                        keyboardType="email-address"
+                        autoCapitalize="none"
+                        placeholderTextColor="#9CA3AF"
+                        // onFocus={scrollToInput}
+                      />
+                    </View>
+                  ) : (
+                    <View style={styles.mobileInputWrapper}>
+                      <View style={styles.countryCode}>
+                        <MaterialCommunityIcons name="phone" size={18} color="#6B7280" />
+                        <Text style={styles.countryCodeText}>+91</Text>
+                      </View>
+                      <TextInput
+                        style={styles.mobileInput}
+                        placeholder="Enter mobile number"
+                        value={mobile}
+                        onChangeText={setMobile}
+                        keyboardType="phone-pad"
+                        maxLength={10}
+                        placeholderTextColor="#9CA3AF"
+                        // onFocus={scrollToInput}
+                      />
+                    </View>
+                  )}
+
+                  {/* Signup Flow */}
+                  {isSignup && !otpSent && (
+                    <TouchableOpacity
+                      style={[styles.primaryButton, loading && styles.disabledButton]}
+                      onPress={handleSendOtp}
+                      disabled={loading}
+                      activeOpacity={0.8}
+                    >
+                      {loading ? (
+                        <ActivityIndicator color="#ffffff" size="small" />
+                      ) : (
+                        <>
+                          <MaterialCommunityIcons name="send" size={18} color="#ffffff" style={styles.buttonIcon} />
+                          <Text style={styles.primaryButtonText}>Send OTP</Text>
+                        </>
+                      )}
+                    </TouchableOpacity>
+                  )}
+
+                  {isSignup && otpSent && (
                     <>
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Password"
-                        value={password}
-                        onChangeText={setPassword}
-                        secureTextEntry
-                      />
-                      <TextInput
-                        style={styles.input}
-                        placeholder="Confirm Password"
-                        value={confirmPassword}
-                        onChangeText={setConfirmPassword}
-                        secureTextEntry
-                      />
+                      <View style={styles.inputContainer}>
+                        <MaterialCommunityIcons 
+                          name="shield-key-outline" 
+                          size={20} 
+                          color="#6B7280" 
+                          style={styles.inputIcon}
+                        />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Enter OTP"
+                          value={otp}
+                          onChangeText={setOtp}
+                          keyboardType="number-pad"
+                          maxLength={6}
+                          editable={!otpVerified}
+                          placeholderTextColor="#9CA3AF"
+                          // onFocus={scrollToInput}
+                        />
+                      </View>
+                      
+                      <View style={styles.otpButtons}>
+                        <TouchableOpacity
+                          style={[
+                            styles.otpButton,
+                            otpVerified ? styles.successButton : styles.warningButton,
+                            loading && styles.disabledButton
+                          ]}
+                          onPress={otpVerified ? undefined : handleVerifyOtp}
+                          disabled={otpVerified || loading}
+                          activeOpacity={0.8}
+                        >
+                          {loading ? (
+                            <ActivityIndicator color="#ffffff" size="small" />
+                          ) : (
+                            <>
+                              <MaterialCommunityIcons 
+                                name={otpVerified ? 'check-circle' : 'shield-check'} 
+                                size={16} 
+                                color="#ffffff" 
+                                style={styles.buttonIcon}
+                              />
+                              <Text style={styles.otpButtonText}>
+                                {otpVerified ? 'Verified' : 'Verify OTP'}
+                              </Text>
+                            </>
+                          )}
+                        </TouchableOpacity>
+                        
+                        <TouchableOpacity
+                          style={[
+                            styles.otpButton,
+                            canResend ? styles.secondaryButton : styles.disabledButton,
+                          ]}
+                          onPress={canResend ? handleSendOtp : undefined}
+                          disabled={!canResend || otpVerified || loading}
+                          activeOpacity={0.8}
+                        >
+                          <MaterialCommunityIcons 
+                            name="refresh" 
+                            size={16} 
+                            color={canResend ? "#10B981" : "#9CA3AF"} 
+                            style={styles.buttonIcon}
+                          />
+                          <Text style={[
+                            styles.secondaryButtonText,
+                            !canResend && styles.disabledButtonText
+                          ]}>
+                            {canResend ? 'Resend' : `${resendTimer}s`}
+                          </Text>
+                        </TouchableOpacity>
+                      </View>
+
+                      {otpVerified && (
+                        <>
+                          {renderPasswordInput(
+                            password,
+                            setPassword,
+                            'Create password',
+                            showPassword,
+                            () => setShowPassword(!showPassword)
+                          )}
+                          
+                          {renderPasswordInput(
+                            confirmPassword,
+                            setConfirmPassword,
+                            'Confirm password',
+                            showConfirmPassword,
+                            () => setShowConfirmPassword(!showConfirmPassword)
+                          )}
+                          
+                          <TouchableOpacity
+                            style={[
+                              styles.primaryButton,
+                              (!password || !confirmPassword || password !== confirmPassword || loading) && styles.disabledButton
+                            ]}
+                            onPress={handleSetPassword}
+                            disabled={!password || !confirmPassword || password !== confirmPassword || loading}
+                            activeOpacity={0.8}
+                          >
+                            {loading ? (
+                              <ActivityIndicator color="#ffffff" size="small" />
+                            ) : (
+                              <>
+                                <MaterialCommunityIcons name="account-plus" size={18} color="#ffffff" style={styles.buttonIcon} />
+                                <Text style={styles.primaryButtonText}>Create Account</Text>
+                              </>
+                            )}
+                          </TouchableOpacity>
+                        </>
+                      )}
+                    </>
+                  )}
+
+                  {/* Login Flow */}
+                  {!isSignup && (
+                    <>
+                      {renderPasswordInput(
+                        password,
+                        setPassword,
+                        'Enter your password',
+                        showPassword,
+                        () => setShowPassword(!showPassword)
+                      )}
+                      
                       <TouchableOpacity
-                        style={[
-                          styles.authButton,
-                          (!password || !confirmPassword || password !== confirmPassword || loading) && styles.disabledButton
-                        ]}
-                        onPress={handleSetPassword}
-                        disabled={!password || !confirmPassword || password !== confirmPassword || loading}
+                        style={[styles.primaryButton, loading && styles.disabledButton]}
+                        onPress={handleLogin}
+                        disabled={loading}
+                        activeOpacity={0.8}
                       >
                         {loading ? (
-                          <ActivityIndicator color="#ffffff" />
+                          <ActivityIndicator color="#ffffff" size="small" />
                         ) : (
-                          <Text style={styles.authButtonText}>Create Account</Text>
+                          <>
+                            <MaterialCommunityIcons name="login" size={18} color="#ffffff" style={styles.buttonIcon} />
+                            <Text style={styles.primaryButtonText}>Login</Text>
+                          </>
                         )}
                       </TouchableOpacity>
                     </>
                   )}
-                </>
-              )}
 
-              {/* Login Flow */}
-              {!isSignup && (
-                <>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Password"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                  />
+                  {/* Switch Button */}
                   <TouchableOpacity
-                    style={[styles.authButton, loading && styles.disabledButton]}
-                    onPress={handleLogin}
-                    disabled={loading}
+                    style={styles.switchButton}
+                    onPress={() => {
+                      setIsSignup(!isSignup);
+                      setOtpSent(false);
+                      setOtp('');
+                      setOtpVerified(false);
+                      setTempKey('');
+                      setPassword('');
+                      setConfirmPassword('');
+                      scrollViewRef.current?.scrollTo({ y: 0, animated: true });
+                    }}
+                    activeOpacity={0.7}
                   >
-                    {loading ? (
-                      <ActivityIndicator color="#ffffff" />
-                    ) : (
-                      <Text style={styles.authButtonText}>Login</Text>
-                    )}
+                    <Text style={styles.switchButtonText}>
+                      {isSignup
+                        ? 'Already have an account? '
+                        : "Don't have an account? "}
+                      <Text style={styles.switchButtonHighlight}>
+                        {isSignup ? 'Login' : 'Sign Up'}
+                      </Text>
+                    </Text>
                   </TouchableOpacity>
-                </>
-              )}
+                </View>
+              </View>
+            </ScrollView>
 
-              <TouchableOpacity
-                style={styles.switchButton}
-                onPress={() => {
-                  setIsSignup(!isSignup);
-                  setOtpSent(false);
-                  setOtp('');
-                  setOtpVerified(false);
-                  setTempKey('');
-                  setPassword('');
-                  setConfirmPassword('');
-                }}
-              >
-                <Text style={styles.switchButtonText}>
-                  {isSignup
-                    ? 'Already have an account? Login'
-                    : "Don't have an account? Sign Up"}
-                </Text>
-              </TouchableOpacity>
-
-              {/* <TouchableOpacity
-                style={styles.guestButton}
-                onPress={() => setGuestMode(true)}
-              >
-                <Text style={styles.guestButtonText}>Continue as Guest</Text>
-              </TouchableOpacity> */}
-            </View>
-          </View>
-        </KeyboardAvoidingView>
-      </View>
+               </KeyboardAwareScrollView>
+          </Animated.View>
+      </Animated.View>
     </Modal>
   );
 }
@@ -540,157 +682,264 @@ export default function AuthPopup({ visible, onClose, onLoginSuccess, onGuestCon
 const styles = StyleSheet.create({
   overlay: {
     flex: 1,
-    backgroundColor: 'rgba(0, 0, 0, 0.5)',
-    justifyContent: 'center',
-    alignItems: 'center',
+    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+    justifyContent: 'flex-end', // Add this to push modal to bottom
   },
-  container: {
-    width: '90%',
-    maxWidth: 400,
+  overlayTouchable: {
+    flex: 0.1, // Change from flex: 1 to flex: 0.1 (only 10% touchable area)
+  },
+  modalContainer: {
+    backgroundColor: '#fff',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: -4 },
+    shadowOpacity: 0.25,
+    shadowRadius: 16,
+    elevation: 16,
+    height: Dimensions.get("window").height * 0.92, // Change to 92% of screen height
+    width: "100%",
+    // Remove flex: 1 and maxHeight properties
+  },
+  dragHandle: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#F3F4F6',
+  },
+  handleBar: {
+    width: 40,
+    height: 4,
+    backgroundColor: '#E5E7EB',
+    borderRadius: 2,
+  },
+  scrollView: {
+    flex: 1,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 40,
   },
   popup: {
-    backgroundColor: '#ffffff',
-    borderRadius: 16,
     padding: 24,
-    maxHeight: '80%',
   },
   header: {
     flexDirection: 'row',
-    alignItems: 'center',
-    marginBottom: 16,
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+    marginBottom: 32,
+  },
+  headerContent: {
+    flex: 1,
+    paddingRight: 16,
   },
   closeButton: {
-    position: 'absolute',
-    right: 0,
-    top: -8,
     padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#F3F4F6',
   },
   title: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    flex: 1,
-    textAlign: 'center',
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+    letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 14,
+    fontSize: 16,
     color: '#6B7280',
-    textAlign: 'center',
-    marginBottom: 24,
+    lineHeight: 24,
   },
   form: {
-    gap: 16,
+    gap: 20,
   },
   methodToggle: {
     flexDirection: 'row',
-    backgroundColor: '#F3F4F6',
-    borderRadius: 8,
+    backgroundColor: '#F9FAFB',
+    borderRadius: 16,
     padding: 4,
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
   },
   methodButton: {
     flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 16,
-    borderRadius: 6,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    gap: 8,
   },
   activeMethodButton: {
     backgroundColor: '#10B981',
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  methodIcon: {
+    marginRight: 4,
   },
   methodButtonText: {
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
     color: '#6B7280',
   },
   activeMethodButtonText: {
     color: '#ffffff',
   },
-  mobileInputContainer: {
+  inputContainer: {
     flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 16,
+    backgroundColor: '#FAFAFA',
+    paddingHorizontal: 16,
+    paddingVertical: 4,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: '#111827',
+    paddingVertical: 16,
+  },
+  mobileInputWrapper: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 16,
+    backgroundColor: '#FAFAFA',
   },
   countryCode: {
-    backgroundColor: '#F3F4F6',
-    borderTopLeftRadius: 12,
-    borderBottomLeftRadius: 12,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRightWidth: 0,
-    paddingHorizontal: 12,
-    paddingVertical: 16,
+    flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 16,
+    borderRightWidth: 1,
+    borderRightColor: '#E5E7EB',
+    gap: 8,
   },
   countryCodeText: {
     fontSize: 16,
+    fontWeight: '600',
     color: '#374151',
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    backgroundColor: '#F9FAFB',
   },
   mobileInput: {
     flex: 1,
-    borderTopLeftRadius: 0,
-    borderBottomLeftRadius: 0,
-    borderLeftWidth: 0,
+    fontSize: 16,
+    color: '#111827',
+    paddingVertical: 16,
+    paddingHorizontal: 16,
   },
-  authButton: {
-    backgroundColor: '#10B981',
-    borderRadius: 12,
-    padding: 16,
+  passwordInputContainer: {
+    flexDirection: 'row',
     alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+    borderRadius: 16,
+    backgroundColor: '#FAFAFA',
+    paddingLeft: 16,
   },
-  disabledButton: {
-    backgroundColor: '#9CA3AF',
+  passwordInput: {
+    flex: 1,
+    fontSize: 16,
+    color: '#111827',
+    paddingVertical: 16,
+    paddingRight: 8,
   },
-  authButtonText: {
+  eyeIcon: {
+    padding: 16,
+  },
+  primaryButton: {
+    backgroundColor: '#10B981',
+    borderRadius: 16,
+    paddingVertical: 16,
+    paddingHorizontal: 24,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 8,
+  },
+  primaryButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
   },
+  secondaryButton: {
+    backgroundColor: '#ffffff',
+    borderWidth: 2,
+    borderColor: '#10B981',
+    borderRadius: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
+  },
+  secondaryButtonText: {
+    color: '#10B981',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  disabledButton: {
+    backgroundColor: '#D1D5DB',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  disabledButtonText: {
+    color: '#9CA3AF',
+  },
   otpButtons: {
     flexDirection: 'row',
-    gap: 8,
+    gap: 12,
   },
   otpButton: {
     flex: 1,
     borderRadius: 12,
-    padding: 16,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    flexDirection: 'row',
     alignItems: 'center',
+    justifyContent: 'center',
+    gap: 6,
   },
-  verifiedButton: {
-    backgroundColor: '#22c55e',
+  otpButtonText: {
+    color: '#ffffff',
+    fontSize: 14,
+    fontWeight: '600',
   },
-  pendingButton: {
-    backgroundColor: '#fde047',
+  successButton: {
+    backgroundColor: '#22C55E',
   },
-  pendingButtonText: {
-    color: '#374151',
+  warningButton: {
+    backgroundColor: '#F59E0B',
+  },
+  buttonIcon: {
+    marginRight: 4,
   },
   switchButton: {
     alignItems: 'center',
-    marginTop: 8,
+    paddingVertical: 16,
   },
   switchButtonText: {
-    color: '#3B82F6',
-    fontSize: 14,
-  },
-  guestButton: {
-    alignItems: 'center',
-    marginTop: 16,
-    paddingVertical: 12,
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 12,
-  },
-  guestButtonText: {
+    fontSize: 15,
     color: '#6B7280',
-    fontSize: 16,
-    fontWeight: '500',
+  },
+  switchButtonHighlight: {
+    color: '#10B981',
+    fontWeight: '600',
   },
 });

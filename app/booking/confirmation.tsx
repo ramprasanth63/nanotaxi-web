@@ -116,9 +116,9 @@ export default function ConfirmationScreen() {
     setGuestCustomerId(customerId);
     setShowAuthPopup(false);
     // Automatically proceed with booking after successful auth
-    setTimeout(() => {
-      handleConfirmBooking(customerId);
-    }, 500);
+    // setTimeout(() => {
+    //   handleConfirmBooking(customerId);
+    // }, 1000);
   };
 
   const handleGuestContinue = () => {
@@ -345,7 +345,6 @@ export default function ConfirmationScreen() {
       <View style={styles.footer}>
         <TouchableOpacity
           style={styles.confirmButton}
-          onPress={handleConfirmBooking}
           onPress={() => handleConfirmBooking()}
           disabled={loading}
         >

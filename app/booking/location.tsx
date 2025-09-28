@@ -440,6 +440,9 @@ export default function LocationScreen() {
   const selectPackage = (pkg: HourlyPackage) => {
     setSelectedPackage(pkg);
     setSelectedHours(pkg.package_hours);
+    if (selectedPackage) {
+      handleBookPackage();
+    }
   };
 
   const adjustHours = (increment: boolean) => {
@@ -616,6 +619,15 @@ export default function LocationScreen() {
                         ₹{selectedPackage.package_price} for {selectedPackage.package_hours} hours
                       </Text>
                     </View>
+
+                    {/* Button to continue */}
+                    <TouchableOpacity
+                      style={styles.continueButton}
+                      onPress={handleBookPackage}
+                    >
+                      <Text style={styles.continueButtonText}>Continue</Text>
+                    </TouchableOpacity>
+
                   </View>
                 )}
               </View>
