@@ -5,6 +5,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
   Alert,
+  ActivityIndicator,
   ScrollView,
   StyleSheet,
   Text,
@@ -14,6 +15,8 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+import AuthPopup from '@/components/AuthPopup';
+
 export default function ConfirmationScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -21,6 +24,8 @@ export default function ConfirmationScreen() {
   const { isLoggedIn, user } = useAuth();
   const [pickupInstructions, setPickupInstructions] = useState('');
   const [loading, setLoading] = useState(false);
+  const [showAuthPopup, setShowAuthPopup] = useState(false);
+  const [guestCustomerId, setGuestCustomerId] = useState<string>('');
 
   // Add this helper function at the top of your component
   const safeParseJSON = (param: any) => {
@@ -48,17 +53,11 @@ export default function ConfirmationScreen() {
     (typeof params.pickupTime === 'string' ? new Date(params.pickupTime) : params.pickupTime) : null;
   const roundTrip = params.roundTrip === 'true' || params.roundTrip === true;
 
-  const handleConfirmBooking = async () => {
+  const handleConfirmBooking = async (customerId?: string) => {
+    const customerIdToUse = customerId || guestCustomerId || user?.customer_id;
+    
     if (!isLoggedIn) {
-      Alert.alert(
-        'Authentication Required',
-        'You need to login to book a ride, or continue as guest',
-        [
-          { text: 'Cancel', style: 'cancel' },
-          { text: 'Login', onPress: () => router.push('/auth/login') },
-          { text: 'Guest Booking', onPress: () => handleGuestBooking() },
-        ]
-      );
+      setShowAuthPopup(true);
       return;
     }
 
@@ -100,24 +99,30 @@ export default function ConfirmationScreen() {
         pickupDate || undefined,
         pickupTime || undefined,
         roundTrip
-    );
+      );
       if (success) {
-        // Alert.alert(
-        //   'Booking Confirmed!',
-        //   'Your ride has been booked successfully. Driver details will be updated soon.',
-        //   [
-        //     { text: 'OK', onPress: () => router.replace('/tracking') }
-        //   ]
-        // );
-      router.replace('/tracking')
+        router.replace('/tracking')
       } else {
-        Alert.alert('Error', success.data.message || 'Failed to book ride. Please try again.');
+        Alert.alert('Error', 'Failed to book ride. Please try again.');
       }
     } catch (error) {
       Alert.alert('Error', 'Something went wrong. Please try again.');
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleAuthSuccess = (customerId: string) => {
+    setGuestCustomerId(customerId);
+    setShowAuthPopup(false);
+    // Automatically proceed with booking after successful auth
+    setTimeout(() => {
+      handleConfirmBooking(customerId);
+    }, 500);
+  };
+
+  const handleGuestContinue = () => {
+    setShowAuthPopup(false);
   };
 
   const handleGuestBooking = () => {
@@ -341,12 +346,20 @@ export default function ConfirmationScreen() {
         <TouchableOpacity
           style={styles.confirmButton}
           onPress={handleConfirmBooking}
+          onPress={() => handleConfirmBooking()}
           disabled={loading}
         >
-          <MaterialCommunityIcons name="currency-inr" size={20} color="#ffffff" />
-          <Text style={styles.confirmButtonText}>
-            {loading ? 'Booking...' : `Confirm Ride - ₹${fare}`}
-          </Text>
+          {loading ? (
+            <>
+              <ActivityIndicator size="small" color="#ffffff" />
+              <Text style={styles.confirmButtonText}>Booking...</Text>
+            </>
+          ) : (
+            <>
+              <MaterialCommunityIcons name="currency-inr" size={20} color="#ffffff" />
+              <Text style={styles.confirmButtonText}>Confirm Ride - ₹{fare}</Text>
+            </>
+          )}
         </TouchableOpacity>
         
         {!isLoggedIn && (
@@ -358,6 +371,13 @@ export default function ConfirmationScreen() {
           </TouchableOpacity>
         )}
       </View>
+
+      <AuthPopup
+        visible={showAuthPopup}
+        onClose={() => setShowAuthPopup(false)}
+        onLoginSuccess={handleAuthSuccess}
+        onGuestContinue={handleGuestContinue}
+      />
     </SafeAreaView>
   );
 }
@@ -552,6 +572,9 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     marginLeft: 8,
+  },
+  disabledButton: {
+    backgroundColor: '#9CA3AF',
   },
   guestButton: {
     alignItems: 'center',

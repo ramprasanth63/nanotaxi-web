@@ -51,15 +51,22 @@ export default function LoginScreen() {
       Alert.alert('Error', 'Please enter your mobile number');
       return;
     }
+    setLoading(true);
     const formattedMobile = mobile.startsWith('+91') ? mobile : `+91${mobile}`;
-    const response = await apiPost('/api/register/', {
-      contact: authMethod === 'email' ? email : formattedMobile,
-      type: authMethod === 'email' ? 'email' : 'phone',
-    });
-    if (response.status == 200) {
-      setOtpSent(true);
-      setResendTimer(30);
-      setCanResend(false);
+    try {
+      const response = await apiPost('/api/register/', {
+        contact: authMethod === 'email' ? email : formattedMobile,
+        type: authMethod === 'email' ? 'email' : 'phone',
+      });
+      if (response.status == 200) {
+        setOtpSent(true);
+        setResendTimer(30);
+        setCanResend(false);
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to send OTP');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -68,6 +75,7 @@ export default function LoginScreen() {
       Alert.alert('Error', 'Please enter the OTP');
       return;
     }
+    setLoading(true);
     const contact = authMethod === 'email' ? email : (mobile.startsWith('+91') ? mobile : `+91${mobile}`);
     try {
       const response = await apiPost('/api/verify_otp/', {
@@ -87,6 +95,8 @@ export default function LoginScreen() {
       setOtpVerified(false);
       setTempKey('');
       Alert.alert('Error', 'OTP verification failed');
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -245,11 +255,15 @@ export default function LoginScreen() {
           {/* Signup: Send OTP and OTP field */}
           {isSignup && !otpSent && (
             <TouchableOpacity
-              style={[styles.authButton, { marginBottom: 0 }]}
+              style={[styles.authButton, { marginBottom: 0 }, loading && styles.disabledButton]}
               onPress={handleSendOtp}
               disabled={loading}
             >
-              <Text style={styles.authButtonText}>Send OTP</Text>
+              {loading ? (
+                <ActivityIndicator color="#ffffff" />
+              ) : (
+                <Text style={styles.authButtonText}>Send OTP</Text>
+              )}
             </TouchableOpacity>
           )}
           {isSignup && otpSent && (
@@ -271,24 +285,34 @@ export default function LoginScreen() {
                     borderColor: otpVerified ? '#22c55e' : '#fde047',
                     borderWidth: 1,
                     marginTop: 0,
-                  }]}
+                  }, loading && styles.disabledButton]}
                   onPress={otpVerified ? undefined : handleVerifyOtp}
-                  disabled={otpVerified}
+                  disabled={otpVerified || loading}
                 >
-                  <Text style={[styles.authButtonText, { color: otpVerified ? '#fff' : '#374151' }]}>Verify OTP</Text>
+                  {loading ? (
+                    <ActivityIndicator color={otpVerified ? "#ffffff" : "#374151"} />
+                  ) : (
+                    <Text style={[styles.authButtonText, { color: otpVerified ? '#fff' : '#374151' }]}>
+                      {otpVerified ? 'Verified ✓' : 'Verify OTP'}
+                    </Text>
+                  )}
                 </TouchableOpacity>
                 <TouchableOpacity
                   style={[styles.authButton, {
                     flex: 1,
                     backgroundColor: canResend ? '#10B981' : '#9CA3AF',
                     marginTop: 0,
-                  }]}
+                  }, loading && styles.disabledButton]}
                   onPress={canResend ? handleSendOtp : undefined}
-                  disabled={!canResend || otpVerified}
+                  disabled={!canResend || otpVerified || loading}
                 >
-                  <Text style={styles.authButtonText}>
-                    {canResend ? 'Resend OTP' : `Resend OTP (${resendTimer}s)`}
-                  </Text>
+                  {loading ? (
+                    <ActivityIndicator color="#ffffff" />
+                  ) : (
+                    <Text style={styles.authButtonText}>
+                      {canResend ? 'Resend OTP' : `Resend OTP (${resendTimer}s)`}
+                    </Text>
+                  )}
                 </TouchableOpacity>
               </View>
               {/* Password fields only after OTP verified */}
@@ -309,7 +333,7 @@ export default function LoginScreen() {
                     secureTextEntry
                   />
                   <TouchableOpacity
-                    style={[styles.authButton, { backgroundColor: '#22c55e', marginTop: 8 }]}
+                    style={[styles.authButton, { backgroundColor: '#22c55e', marginTop: 8 }, loading && styles.disabledButton]}
                     onPress={handleSetPassword}
                     disabled={loading || !password || !confirmPassword || password !== confirmPassword}
                   >
@@ -334,7 +358,7 @@ export default function LoginScreen() {
                 secureTextEntry
               />
               <TouchableOpacity
-                style={styles.authButton}
+                style={[styles.authButton, loading && styles.disabledButton]}
                 onPress={handleAuth}
                 disabled={loading}
               >
@@ -421,6 +445,9 @@ const styles = StyleSheet.create({
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  disabledButton: {
+    backgroundColor: '#9CA3AF',
   },
   switchButton: {
     alignItems: 'center',

@@ -471,45 +471,13 @@ export default function LocationScreen() {
       return;
     }
 
-    setBookingLoading(true);
-    try {
-      const payload = {
-        customer_id: user.customer_id, // You might want to get this from user context/storage
-        vehicle_type: selectedPackage.vehicle_model,
-        total_hours_booked: selectedHours,
-        total_km_booked: calculatedKm,
-        toll_amount: 0,
-        parking_fee: 0,
-        no_of_nights: 1,
-        night_halt_charges: 0,
-        base_amount: totalPrice,
-        total_amount: totalPrice,
-        date_of_travel: dateOfTravel.toISOString().split('T')[0],
-        pickup_time: pickupTime.toTimeString().split(' ')[0],
-        pick_up_place: selectedPickupLocation.name,
-        pick_up_address: pickupAddress.trim(),
-        special_instructions: specialInstructions.trim()
-      };
-
-      const response = await apiPost('/api/book_package/', payload);
-      console.log("responce", response);
-
-      if (response.status === 201) {
-        Alert.alert('Success', 'Package booked successfully!', [
-          {
-            text: 'OK',
-            onPress: () => router.push('/tracking')
-          }
-        ]);
-      } else {
-        Alert.alert('Error', 'Failed to book package. Please try again.');
-      }
-    } catch (error) {
-      console.error('Booking error:', error);
-      Alert.alert('Error', 'Failed to book package. Please try again.');
-    } finally {
-      setBookingLoading(false);
-    }
+    // Navigate to hourly confirmation screen
+    router.push({
+      pathname: '/booking/hourly-confirmation',
+      params: {
+        package: JSON.stringify(selectedPackage),
+      },
+    });
   };
 
   const handleContinue = () => {
@@ -640,117 +608,13 @@ export default function LocationScreen() {
 
                 {selectedPackage && (
                   <View>
-                    {/* Hour Selection */}
-                    <View style={styles.hourSelectionContainer}>
-                      <Text style={styles.sectionTitle}>Select Hours</Text>
-                      <View style={styles.hourAdjuster}>
-                        <TouchableOpacity
-                          style={styles.hourButton}
-                          onPress={() => adjustHours(false)}
-                        >
-                          <MaterialCommunityIcons name="minus" size={24} color="#10B981" />
-                        </TouchableOpacity>
-                        <Text style={styles.hourText}>{selectedHours} Hours</Text>
-                        <TouchableOpacity
-                          style={styles.hourButton}
-                          onPress={() => adjustHours(true)}
-                        >
-                          <MaterialCommunityIcons name="plus" size={24} color="#10B981" />
-                        </TouchableOpacity>
-                      </View>
-                      <Text style={styles.calculatedKmText}>Total KM: {calculatedKm} km</Text>
-                      <Text style={styles.totalPriceText}>Total Price: ₹{totalPrice}</Text>
-                    </View>
-
-                    {/* Booking Form */}
-                    <View style={styles.bookingForm}>
-                      <Text style={styles.sectionTitle}>Booking Details</Text>
-
-                      {/* Pickup Place */}
-                      <TouchableOpacity
-                        style={styles.inputContainer}
-                        onPress={handleOpenPickupModal}
-                      >
-                        <MaterialCommunityIcons name="map-marker" size={20} color="#10B981" style={styles.inputIcon} />
-                        <Text style={[styles.inputText, { color: pickupPlace ? '#1F2937' : '#9CA3AF' }]}>
-                          {pickupPlace || 'Pickup place'}
-                        </Text>
-                        <MaterialCommunityIcons name="chevron-right" size={16} color="#D1D5DB" />
-                      </TouchableOpacity>
-
-                      {/* {editingPickup && pickupSuggestions.length > 0 && (
-                        <View style={styles.pickupSuggestionsContainer}>
-                          <Text style={styles.suggestionHeader}>Pickup Locations</Text>
-                          <ScrollView
-                            style={styles.suggestionScrollView}
-                            showsVerticalScrollIndicator={true}
-                            nestedScrollEnabled={true}
-                            contentContainerStyle={styles.suggestionContentContainer}
-                          >
-                            {pickupSuggestions.map((location) => (
-                              <TouchableOpacity
-                                key={`pickup-${location.id}`}
-                                style={styles.suggestionItem}
-                                onPress={() => selectPickupLocation(location)}
-                              >
-                                <MaterialCommunityIcons name="map-marker" size={16} color="#10B981" />
-                                <View style={styles.suggestionText}>
-                                  <Text style={styles.suggestionName}>{location.name}</Text>
-                                  <Text style={styles.suggestionAddress}>{location.address}</Text>
-                                </View>
-                              </TouchableOpacity>
-                            ))}
-                          </ScrollView>
-                        </View>
-                      )} */}
-
-                      {/* Date and Time */}
-                      <View style={styles.dateTimeRow}>
-                        <TouchableOpacity
-                          style={[styles.inputContainer, styles.dateTimeInput]}
-                          onPress={() => setShowDatePicker(true)}
-                        >
-                          <MaterialCommunityIcons name="calendar" size={20} color="#10B981" style={styles.inputIcon} />
-                          <Text style={styles.dateTimeText}>
-                            {dateOfTravel.toDateString()}
-                          </Text>
-                        </TouchableOpacity>
-
-                        <TouchableOpacity
-                          style={[styles.inputContainer, styles.dateTimeInput]}
-                          onPress={() => setShowTimePicker(true)}
-                        >
-                          <MaterialCommunityIcons name="clock" size={20} color="#10B981" style={styles.inputIcon} />
-                          <Text style={styles.dateTimeText}>
-                            {pickupTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                          </Text>
-                        </TouchableOpacity>
-                      </View>
-
-                      {/* Pickup Address */}
-                      <View style={styles.inputContainer}>
-                        <MaterialCommunityIcons name="home" size={20} color="#10B981" style={styles.inputIcon} />
-                        <TextInput
-                          style={styles.input}
-                          value={pickupAddress}
-                          onChangeText={setPickupAddress}
-                          placeholder="Pickup address"
-                          multiline
-                        />
-                      </View>
-
-                      {/* Special Instructions */}
-                      <View style={styles.inputContainer}>
-                        <MaterialCommunityIcons name="note-text" size={20} color="#10B981" style={styles.inputIcon} />
-                        <TextInput
-                          style={[styles.input, styles.textArea]}
-                          value={specialInstructions}
-                          onChangeText={setSpecialInstructions}
-                          placeholder="Special instructions (optional)"
-                          multiline
-                          numberOfLines={3}
-                        />
-                      </View>
+                    <View style={styles.selectedPackageInfo}>
+                      <Text style={styles.selectedPackageText}>
+                        Selected: {selectedPackage.vehicle_model}
+                      </Text>
+                      <Text style={styles.selectedPackagePrice}>
+                        ₹{selectedPackage.package_price} for {selectedPackage.package_hours} hours
+                      </Text>
                     </View>
                   </View>
                 )}
@@ -835,20 +699,20 @@ export default function LocationScreen() {
           <TouchableOpacity
             style={[
               styles.continueButton,
-              (!selectedPackage || !selectedPickupLocation || !pickupAddress.trim() || bookingLoading) && styles.disabledButton
+              (!selectedPackage || bookingLoading) && styles.disabledButton
             ]}
             onPress={handleBookPackage}
-            disabled={!selectedPackage || !selectedPickupLocation || !pickupAddress.trim() || bookingLoading}
+            disabled={!selectedPackage || bookingLoading}
           >
             {bookingLoading ? (
               <>
                 <ActivityIndicator size="small" color="#ffffff" />
-                <Text style={styles.continueButtonText}>Booking...</Text>
+                <Text style={styles.continueButtonText}>Loading...</Text>
               </>
             ) : (
               <>
-                <Text style={styles.continueButtonText}>Book Package</Text>
-                <MaterialCommunityIcons name="check" size={20} color="#ffffff" />
+                <Text style={styles.continueButtonText}>Continue</Text>
+                <MaterialCommunityIcons name="arrow-right" size={20} color="#ffffff" />
               </>
             )}
           </TouchableOpacity>
@@ -1158,9 +1022,23 @@ const styles = StyleSheet.create({
     color: '#10B981',
     textAlign: 'center',
   },
-  bookingForm: {
-    paddingHorizontal: 24,
-    paddingVertical: 16,
+  selectedPackageInfo: {
+    backgroundColor: '#ECFDF5',
+    borderRadius: 12,
+    padding: 16,
+    marginHorizontal: 24,
+    marginVertical: 16,
+  },
+  selectedPackageText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+    marginBottom: 4,
+  },
+  selectedPackagePrice: {
+    fontSize: 14,
+    color: '#10B981',
+    fontWeight: '500',
   },
   dateTimeRow: {
     flexDirection: 'row',
