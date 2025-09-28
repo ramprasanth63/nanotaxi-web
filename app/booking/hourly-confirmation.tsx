@@ -1,8 +1,13 @@
+import AuthPopup from '@/components/AuthPopup';
+import LocationInputModal from '@/components/LocationInputModal';
 import { useAuth } from '@/contexts/AuthContext';
 import { apiPost } from '@/services/apiClient';
+import { Location as LocationType } from '@/types';
+import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import React, { useState } from 'react';
+import React, { useEffect, useRef, useState } from 'react';
 import {
+  ActivityIndicator,
   Alert,
   ScrollView,
   StyleSheet,
@@ -10,11 +15,9 @@ import {
   TextInput,
   TouchableOpacity,
   View,
-  ActivityIndicator,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import AuthPopup from '@/components/AuthPopup';
 
 interface HourlyPackage {
   id: number;
@@ -36,26 +39,182 @@ export default function HourlyConfirmationScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
   const { isLoggedIn, user } = useAuth();
+  const isMounted = useRef(true);
+
+  // Package and pricing states
   const [selectedHours, setSelectedHours] = useState(0);
   const [calculatedKm, setCalculatedKm] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
+  
+  // Location and form states
   const [pickupPlace, setPickupPlace] = useState('');
+  const [pickupSuggestions, setPickupSuggestions] = useState<LocationType[]>([]);
+  const [selectedPickupLocation, setSelectedPickupLocation] = useState<LocationType | null>(null);
+  const [editingPickup, setEditingPickup] = useState(false);
+  
+  // Date and time states
   const [dateOfTravel, setDateOfTravel] = useState(new Date());
   const [pickupTime, setPickupTime] = useState(new Date());
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  
+  // Other form states
   const [pickupAddress, setPickupAddress] = useState('');
   const [specialInstructions, setSpecialInstructions] = useState('');
+  
+  // UI states
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [searchLoading, setSearchLoading] = useState(false);
   const [showAuthPopup, setShowAuthPopup] = useState(false);
+  const [showPickupModal, setShowPickupModal] = useState(false);
   const [guestCustomerId, setGuestCustomerId] = useState<string>('');
+
+  // API Keys
+  const GOOGLE_MAPS_API_KEY = "AIzaSyCy9vw9wy_eZeYd4BO9ifFiky2vOfvB-zc";
+  const OPENROUTESERVICE_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImY3MDRkYTQ3MWYxNDRiMTdiODBiMGViNzQwZTZiY2NjIiwiaCI6Im11cm11cjY0In0=";
 
   const selectedPackage: HourlyPackage = JSON.parse(params.package as string);
 
-  React.useEffect(() => {
+  useEffect(() => {
+    isMounted.current = true;
+    
     if (selectedPackage) {
       setSelectedHours(selectedPackage.package_hours);
       calculatePricing(selectedPackage.package_hours);
     }
+
+    return () => {
+      isMounted.current = false;
+    };
   }, [selectedPackage]);
+
+  useEffect(() => {
+    if (pickupPlace.length > 2 && editingPickup) {
+      searchLocationsByGoogle(pickupPlace);
+    } else {
+      setPickupSuggestions([]);
+    }
+  }, [pickupPlace, editingPickup]);
+
+  const searchLocationsByGoogle = async (query: string) => {
+    if (!isMounted.current) return;
+
+    setSearchLoading(true);
+    try {
+      const autocompleteUrl = `https://maps.googleapis.com/maps/api/place/autocomplete/json?input=${encodeURIComponent(
+        query
+      )}&components=country:IN&key=${GOOGLE_MAPS_API_KEY}`;
+
+      const res = await fetch(autocompleteUrl);
+      const data = await res.json();
+
+      const predictions = data.predictions || [];
+
+      if (!predictions.length) {
+        console.warn("Google returned no results, falling back to ORS...");
+        await searchLocations(query);
+        return;
+      }
+
+      const locations: LocationType[] = await Promise.all(
+        predictions.map(async (prediction: any, i: number) => {
+          try {
+            const detailsUrl = `https://maps.googleapis.com/maps/api/place/details/json?place_id=${prediction.place_id}&fields=geometry,name,formatted_address,place_id&key=${GOOGLE_MAPS_API_KEY}`;
+            const detailsRes = await fetch(detailsUrl);
+            const detailsData = await detailsRes.json();
+
+            const location = detailsData.result;
+
+            return {
+              id: location.place_id || String(i),
+              name: location.name || prediction.description || "Unknown",
+              address: location.formatted_address || prediction.description || "",
+              latitude: location.geometry?.location?.lat || 0,
+              longitude: location.geometry?.location?.lng || 0,
+              raw: location,
+            };
+          } catch (err) {
+            console.error("Place details fetch failed, skipping:", err);
+            return null;
+          }
+        })
+      );
+
+      const validLocations = locations.filter((loc) => loc !== null);
+
+      if (!validLocations.length) {
+        console.warn("Google details fetch failed, falling back to ORS...");
+        await searchLocations(query);
+        return;
+      }
+
+      if (isMounted.current) {
+        setPickupSuggestions(validLocations as LocationType[]);
+      }
+    } catch (error) {
+      console.error("Google Places search error:", error);
+      if (isMounted.current) {
+        await searchLocations(query);
+      }
+    } finally {
+      if (isMounted.current) {
+        setSearchLoading(false);
+      }
+    }
+  };
+
+  const searchLocations = async (query: string) => {
+    if (!isMounted.current) return;
+
+    setSearchLoading(true);
+    try {
+      const url = `https://api.openrouteservice.org/geocode/search?api_key=${OPENROUTESERVICE_API_KEY}&text=${encodeURIComponent(query)}&boundary.country=IND`;
+      const res = await fetch(url);
+      const data = await res.json();
+
+      const features = data.features || [];
+      const locations: LocationType[] = features.map((feature: any, i: number) => ({
+        id: feature.properties.id || String(i),
+        name: feature.properties.label || feature.properties.name || "Unknown",
+        address: feature.properties.label || "",
+        latitude: feature.geometry.coordinates[1],
+        longitude: feature.geometry.coordinates[0],
+        raw: feature,
+      }));
+
+      if (isMounted.current) {
+        setPickupSuggestions(locations);
+      }
+    } catch (error) {
+      console.error('Location search error:', error);
+      if (isMounted.current) {
+        setPickupSuggestions([]);
+      }
+    } finally {
+      if (isMounted.current) {
+        setSearchLoading(false);
+      }
+    }
+  };
+
+  const handleOpenPickupModal = () => {
+    setShowPickupModal(true);
+    setEditingPickup(true);
+  };
+
+  const handleClosePickupModal = () => {
+    setShowPickupModal(false);
+    setEditingPickup(false);
+    setPickupSuggestions([]);
+  };
+
+  const selectPickupLocation = (location: LocationType) => {
+    setSelectedPickupLocation(location);
+    setPickupPlace(location.name);
+    setPickupSuggestions([]);
+    setEditingPickup(false);
+    setShowPickupModal(false);
+  };
 
   const calculatePricing = (hours: number) => {
     if (!selectedPackage) return;
@@ -93,10 +252,24 @@ export default function HourlyConfirmationScreen() {
     calculatePricing(newHours);
   };
 
+  const handleDateChange = (event: any, selectedDate?: Date) => {
+    setShowDatePicker(false);
+    if (selectedDate) {
+      setDateOfTravel(selectedDate);
+    }
+  };
+
+  const handleTimeChange = (event: any, selectedTime?: Date) => {
+    setShowTimePicker(false);
+    if (selectedTime) {
+      setPickupTime(selectedTime);
+    }
+  };
+
   const handleBookPackage = async (customerId?: string) => {
     // Validation
-    if (!pickupPlace.trim()) {
-      Alert.alert('Error', 'Please enter pickup location');
+    if (!selectedPickupLocation) {
+      Alert.alert('Error', 'Please select pickup location');
       return;
     }
 
@@ -127,7 +300,7 @@ export default function HourlyConfirmationScreen() {
         total_amount: totalPrice,
         date_of_travel: dateOfTravel.toISOString().split('T')[0],
         pickup_time: pickupTime.toTimeString().split(' ')[0],
-        pick_up_place: pickupPlace,
+        pick_up_place: selectedPickupLocation.name,
         pick_up_address: pickupAddress.trim(),
         special_instructions: specialInstructions.trim()
       };
@@ -135,12 +308,13 @@ export default function HourlyConfirmationScreen() {
       const response = await apiPost('/api/book_package/', payload);
 
       if (response.status === 201) {
-        Alert.alert('Success', 'Package booked successfully!', [
-          {
-            text: 'OK',
-            onPress: () => router.push('/tracking')
-          }
-        ]);
+        // Alert.alert('Success', 'Package booked successfully!', [
+        //   {
+        //     text: 'OK',
+        //     onPress: () => router.push('/tracking')
+        //   }
+        // ]);
+        router.push('/tracking');
       } else {
         Alert.alert('Error', 'Failed to book package. Please try again.');
       }
@@ -156,9 +330,9 @@ export default function HourlyConfirmationScreen() {
     setGuestCustomerId(customerId);
     setShowAuthPopup(false);
     // Automatically proceed with booking after successful auth
-    setTimeout(() => {
-      handleBookPackage(customerId);
-    }, 500);
+    // setTimeout(() => {
+    //   handleBookPackage(customerId);
+    // }, 500);
   };
 
   const handleGuestContinue = () => {
@@ -191,57 +365,90 @@ export default function HourlyConfirmationScreen() {
             <Text style={styles.packageInfo}>
               Base: {selectedPackage.package_hours} Hours • {selectedPackage.package_km} KM
             </Text>
-            <Text style={styles.packagePrice}>₹{selectedPackage.package_price}</Text>
+            <View style={styles.packageRates}>
+              <Text style={styles.rateText}>Extra KM: ₹{selectedPackage.extra_km_rate}/km</Text>
+              <Text style={styles.rateText}>Extra Hour: ₹{selectedPackage.extra_hr_rate}/hr</Text>
+            </View>
+            <Text style={styles.packagePrice}>Base Price: ₹{selectedPackage.package_price}</Text>
           </View>
         </View>
 
         {/* Hour Selection */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Select Hours</Text>
-          <View style={styles.hourAdjuster}>
-            <TouchableOpacity
-              style={styles.hourButton}
-              onPress={() => adjustHours(false)}
-            >
-              <MaterialCommunityIcons name="minus" size={24} color="#10B981" />
-            </TouchableOpacity>
-            <Text style={styles.hourText}>{selectedHours} Hours</Text>
-            <TouchableOpacity
-              style={styles.hourButton}
-              onPress={() => adjustHours(true)}
-            >
-              <MaterialCommunityIcons name="plus" size={24} color="#10B981" />
-            </TouchableOpacity>
+          <View style={styles.hourSelectionContainer}>
+            <View style={styles.hourAdjuster}>
+              <TouchableOpacity
+                style={styles.hourButton}
+                onPress={() => adjustHours(false)}
+              >
+                <MaterialCommunityIcons name="minus" size={24} color="#10B981" />
+              </TouchableOpacity>
+              <Text style={styles.hourText}>{selectedHours} Hours</Text>
+              <TouchableOpacity
+                style={styles.hourButton}
+                onPress={() => adjustHours(true)}
+              >
+                <MaterialCommunityIcons name="plus" size={24} color="#10B981" />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.calculatedKmText}>Total KM: {calculatedKm} km</Text>
+            <Text style={styles.totalPriceText}>Total Price: ₹{totalPrice}</Text>
           </View>
-          <Text style={styles.calculatedKmText}>Total KM: {calculatedKm} km</Text>
-          <Text style={styles.totalPriceText}>Total Price: ₹{totalPrice}</Text>
         </View>
 
         {/* Booking Details */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Booking Details</Text>
           
-          <View style={styles.inputContainer}>
+          {/* Pickup Location */}
+          <TouchableOpacity
+            style={styles.inputContainer}
+            onPress={handleOpenPickupModal}
+          >
             <MaterialCommunityIcons name="map-marker" size={20} color="#10B981" style={styles.inputIcon} />
-            <TextInput
-              style={styles.input}
-              value={pickupPlace}
-              onChangeText={setPickupPlace}
-              placeholder="Pickup place"
-            />
+            <Text style={[styles.inputText, { color: pickupPlace ? '#1F2937' : '#9CA3AF' }]}>
+              {pickupPlace || 'Select pickup location'}
+            </Text>
+            <MaterialCommunityIcons name="chevron-right" size={16} color="#D1D5DB" />
+          </TouchableOpacity>
+
+          {/* Date and Time Selection */}
+          <View style={styles.dateTimeRow}>
+            <TouchableOpacity
+              style={[styles.inputContainer, styles.dateTimeInput]}
+              onPress={() => setShowDatePicker(true)}
+            >
+              <MaterialCommunityIcons name="calendar" size={20} color="#10B981" style={styles.inputIcon} />
+              <Text style={styles.dateTimeText}>
+                {dateOfTravel.toDateString()}
+              </Text>
+            </TouchableOpacity>
+
+            <TouchableOpacity
+              style={[styles.inputContainer, styles.dateTimeInput]}
+              onPress={() => setShowTimePicker(true)}
+            >
+              <MaterialCommunityIcons name="clock" size={20} color="#10B981" style={styles.inputIcon} />
+              <Text style={styles.dateTimeText}>
+                {pickupTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+              </Text>
+            </TouchableOpacity>
           </View>
 
+          {/* Pickup Address */}
           <View style={styles.inputContainer}>
             <MaterialCommunityIcons name="home" size={20} color="#10B981" style={styles.inputIcon} />
             <TextInput
               style={styles.input}
               value={pickupAddress}
               onChangeText={setPickupAddress}
-              placeholder="Pickup address"
+              placeholder="Enter detailed pickup address"
               multiline
             />
           </View>
 
+          {/* Special Instructions */}
           <View style={styles.inputContainer}>
             <MaterialCommunityIcons name="note-text" size={20} color="#10B981" style={styles.inputIcon} />
             <TextInput
@@ -271,10 +478,10 @@ export default function HourlyConfirmationScreen() {
         <TouchableOpacity
           style={[
             styles.bookButton,
-            (!pickupPlace.trim() || !pickupAddress.trim() || bookingLoading) && styles.disabledButton
+            (!selectedPickupLocation || !pickupAddress.trim() || bookingLoading) && styles.disabledButton
           ]}
           onPress={() => handleBookPackage()}
-          disabled={!pickupPlace.trim() || !pickupAddress.trim() || bookingLoading}
+          disabled={!selectedPickupLocation || !pickupAddress.trim() || bookingLoading}
         >
           {bookingLoading ? (
             <>
@@ -290,6 +497,42 @@ export default function HourlyConfirmationScreen() {
         </TouchableOpacity>
       </View>
 
+      {/* Date Time Pickers */}
+      {showDatePicker && (
+        <DateTimePicker
+          value={dateOfTravel}
+          mode="date"
+          display="default"
+          onChange={handleDateChange}
+          minimumDate={new Date()}
+        />
+      )}
+
+      {showTimePicker && (
+        <DateTimePicker
+          value={pickupTime}
+          mode="time"
+          display="default"
+          onChange={handleTimeChange}
+        />
+      )}
+
+      {/* Location Input Modal */}
+      <LocationInputModal
+        visible={showPickupModal}
+        onClose={handleClosePickupModal}
+        onSelectLocation={selectPickupLocation}
+        onSearchChange={setPickupPlace}
+        title="Select Pickup Location"
+        placeholder="Search for pickup location..."
+        initialValue={pickupPlace}
+        suggestions={pickupSuggestions}
+        loading={searchLoading}
+        iconName="map-marker"
+        iconColor="#10B981"
+      />
+
+      {/* Auth Popup */}
       <AuthPopup
         visible={showAuthPopup}
         onClose={() => setShowAuthPopup(false)}
@@ -363,10 +606,24 @@ const styles = StyleSheet.create({
     color: '#374151',
     marginBottom: 8,
   },
+  packageRates: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 12,
+  },
+  rateText: {
+    fontSize: 12,
+    color: '#6B7280',
+  },
   packagePrice: {
     fontSize: 18,
     fontWeight: '700',
     color: '#10B981',
+  },
+  hourSelectionContainer: {
+    backgroundColor: '#F9FAFB',
+    borderRadius: 12,
+    padding: 16,
   },
   hourAdjuster: {
     flexDirection: 'row',
@@ -404,27 +661,45 @@ const styles = StyleSheet.create({
   },
   inputContainer: {
     flexDirection: 'row',
-    alignItems: 'flex-start',
+    alignItems: 'center',
     borderWidth: 1,
     borderColor: '#D1D5DB',
     borderRadius: 12,
     paddingHorizontal: 16,
-    paddingVertical: 12,
-    marginBottom: 16,
+    paddingVertical: 14,
     backgroundColor: '#F9FAFB',
+    marginBottom: 16,
+    minHeight: 52,
   },
   inputIcon: {
     marginRight: 12,
-    marginTop: 2,
   },
   input: {
     flex: 1,
     fontSize: 16,
     color: '#1F2937',
   },
+  inputText: {
+    flex: 1,
+    fontSize: 16,
+    paddingVertical: 2,
+  },
   textArea: {
     minHeight: 80,
     textAlignVertical: 'top',
+  },
+  dateTimeRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  dateTimeInput: {
+    flex: 1,
+  },
+  dateTimeText: {
+    fontSize: 16,
+    color: '#1F2937',
+    flex: 1,
   },
   fareContainer: {
     backgroundColor: '#ECFDF5',
