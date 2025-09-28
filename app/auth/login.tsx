@@ -392,7 +392,7 @@ export default function LoginScreen() {
             style={styles.skipButton}
             onPress={() => router.replace('/(tabs)')}
           >
-            <Text style={styles.skipButtonText}>Skip & Continue as Guest</Text>
+            {/* <Text style={styles.skipButtonText}>Skip & Continue as Guest</Text> */}
           </TouchableOpacity>
         </View>
       </View>

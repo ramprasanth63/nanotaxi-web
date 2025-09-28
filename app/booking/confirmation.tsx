@@ -1,11 +1,12 @@
+import AuthPopup from '@/components/AuthPopup';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBooking } from '@/contexts/BookingContext';
 import { Location, Vehicle } from '@/types';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import React, { useState } from 'react';
 import {
-  Alert,
   ActivityIndicator,
+  Alert,
   ScrollView,
   StyleSheet,
   Text,
@@ -15,7 +16,6 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-import AuthPopup from '@/components/AuthPopup';
 
 export default function ConfirmationScreen() {
   const router = useRouter();
@@ -362,14 +362,14 @@ export default function ConfirmationScreen() {
           )}
         </TouchableOpacity>
         
-        {!isLoggedIn && (
+        {/* {!isLoggedIn && (
           <TouchableOpacity
             style={styles.guestButton}
             onPress={handleGuestBooking}
           >
             <Text style={styles.guestButtonText}>Continue as Guest</Text>
           </TouchableOpacity>
-        )}
+        )} */}
       </View>
 
       <AuthPopup

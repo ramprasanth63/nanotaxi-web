@@ -3,14 +3,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { ArrowRight, Phone, Sparkles, Users } from 'lucide-react-native';
 import React, { useEffect, useRef } from 'react';
 import {
-    Animated,
-    Dimensions,
-    Linking,
-    Platform,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View
+  Animated,
+  Dimensions,
+  Linking,
+  Platform,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View
 } from 'react-native';
 
 const { width } = Dimensions.get('window');
@@ -179,7 +179,8 @@ const HireDriverButton: React.FC<HireDriverButtonProps> = ({ onPress, style }) =
 const styles = StyleSheet.create({
   container: {
     position: 'relative',
-    marginVertical: 16,
+    marginVertical: 8,
+    marginBottom: 0,
     marginHorizontal: 16,
   },
   glowEffect: {

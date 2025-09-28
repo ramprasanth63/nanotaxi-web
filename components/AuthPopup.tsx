@@ -241,78 +241,78 @@ export default function AuthPopup({ visible, onClose, onLoginSuccess, onGuestCon
     }
   };
 
-  if (guestMode) {
-    return (
-      <Modal visible={visible} animationType="slide" transparent>
-        <View style={styles.overlay}>
-          <KeyboardAvoidingView
-            style={styles.container}
-            behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-          >
-            <View style={styles.popup}>
-              <View style={styles.header}>
-                <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
-                  <MaterialCommunityIcons name="close" size={24} color="#6B7280" />
-                </TouchableOpacity>
-                <Text style={styles.title}>Continue as Guest</Text>
-              </View>
+  // if (guestMode) {
+  //   return (
+  //     <Modal visible={visible} animationType="slide" transparent>
+  //       <View style={styles.overlay}>
+  //         <KeyboardAvoidingView
+  //           style={styles.container}
+  //           behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+  //         >
+  //           <View style={styles.popup}>
+  //             <View style={styles.header}>
+  //               <TouchableOpacity onPress={handleClose} style={styles.closeButton}>
+  //                 <MaterialCommunityIcons name="close" size={24} color="#6B7280" />
+  //               </TouchableOpacity>
+  //               <Text style={styles.title}>Continue as Guest</Text>
+  //             </View>
 
-              <Text style={styles.subtitle}>Enter your contact details to continue</Text>
+  //             <Text style={styles.subtitle}>Enter your contact details to continue</Text>
 
-              <View style={styles.form}>
-                <View style={styles.methodToggle}>
-                  <TouchableOpacity
-                    style={[styles.methodButton, guestContactType === 'email' && styles.activeMethodButton]}
-                    onPress={() => setGuestContactType('email')}
-                  >
-                    <Text style={[styles.methodButtonText, guestContactType === 'email' && styles.activeMethodButtonText]}>
-                      Email
-                    </Text>
-                  </TouchableOpacity>
-                  <TouchableOpacity
-                    style={[styles.methodButton, guestContactType === 'mobile' && styles.activeMethodButton]}
-                    onPress={() => setGuestContactType('mobile')}
-                  >
-                    <Text style={[styles.methodButtonText, guestContactType === 'mobile' && styles.activeMethodButtonText]}>
-                      Mobile
-                    </Text>
-                  </TouchableOpacity>
-                </View>
+  //             <View style={styles.form}>
+  //               <View style={styles.methodToggle}>
+  //                 <TouchableOpacity
+  //                   style={[styles.methodButton, guestContactType === 'email' && styles.activeMethodButton]}
+  //                   onPress={() => setGuestContactType('email')}
+  //                 >
+  //                   <Text style={[styles.methodButtonText, guestContactType === 'email' && styles.activeMethodButtonText]}>
+  //                     Email
+  //                   </Text>
+  //                 </TouchableOpacity>
+  //                 <TouchableOpacity
+  //                   style={[styles.methodButton, guestContactType === 'mobile' && styles.activeMethodButton]}
+  //                   onPress={() => setGuestContactType('mobile')}
+  //                 >
+  //                   <Text style={[styles.methodButtonText, guestContactType === 'mobile' && styles.activeMethodButtonText]}>
+  //                     Mobile
+  //                   </Text>
+  //                 </TouchableOpacity>
+  //               </View>
 
-                <TextInput
-                  style={styles.input}
-                  placeholder={guestContactType === 'email' ? 'Enter your email' : 'Enter your mobile number'}
-                  value={guestContact}
-                  onChangeText={setGuestContact}
-                  keyboardType={guestContactType === 'email' ? 'email-address' : 'phone-pad'}
-                  autoCapitalize="none"
-                />
+  //               <TextInput
+  //                 style={styles.input}
+  //                 placeholder={guestContactType === 'email' ? 'Enter your email' : 'Enter your mobile number'}
+  //                 value={guestContact}
+  //                 onChangeText={setGuestContact}
+  //                 keyboardType={guestContactType === 'email' ? 'email-address' : 'phone-pad'}
+  //                 autoCapitalize="none"
+  //               />
 
-                <TouchableOpacity
-                  style={[styles.authButton, loading && styles.disabledButton]}
-                  onPress={handleGuestLogin}
-                  disabled={loading}
-                >
-                  {loading ? (
-                    <ActivityIndicator color="#ffffff" />
-                  ) : (
-                    <Text style={styles.authButtonText}>Continue as Guest</Text>
-                  )}
-                </TouchableOpacity>
+  //               <TouchableOpacity
+  //                 style={[styles.authButton, loading && styles.disabledButton]}
+  //                 onPress={handleGuestLogin}
+  //                 disabled={loading}
+  //               >
+  //                 {loading ? (
+  //                   <ActivityIndicator color="#ffffff" />
+  //                 ) : (
+  //                   <Text style={styles.authButtonText}>Continue as Guest</Text>
+  //                 )}
+  //               </TouchableOpacity>
 
-                <TouchableOpacity
-                  style={styles.switchButton}
-                  onPress={() => setGuestMode(false)}
-                >
-                  <Text style={styles.switchButtonText}>Back to Login/Signup</Text>
-                </TouchableOpacity>
-              </View>
-            </View>
-          </KeyboardAvoidingView>
-        </View>
-      </Modal>
-    );
-  }
+  //               <TouchableOpacity
+  //                 style={styles.switchButton}
+  //                 onPress={() => setGuestMode(false)}
+  //               >
+  //                 <Text style={styles.switchButtonText}>Back to Login/Signup</Text>
+  //               </TouchableOpacity>
+  //             </View>
+  //           </View>
+  //         </KeyboardAvoidingView>
+  //       </View>
+  //     </Modal>
+  //   );
+  // }
 
   return (
     <Modal visible={visible} animationType="slide" transparent>
@@ -523,12 +523,12 @@ export default function AuthPopup({ visible, onClose, onLoginSuccess, onGuestCon
                 </Text>
               </TouchableOpacity>
 
-              <TouchableOpacity
+              {/* <TouchableOpacity
                 style={styles.guestButton}
                 onPress={() => setGuestMode(true)}
               >
                 <Text style={styles.guestButtonText}>Continue as Guest</Text>
-              </TouchableOpacity>
+              </TouchableOpacity> */}
             </View>
           </View>
         </KeyboardAvoidingView>

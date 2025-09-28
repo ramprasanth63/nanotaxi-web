@@ -1,4 +1,4 @@
-import { apiGet, apiPost } from '@/services/apiClient';
+import { apiGet } from '@/services/apiClient';
 import { Location as LocationType } from '@/types';
 import * as Location from 'expo-location';
 import { useRouter } from 'expo-router';
@@ -10,7 +10,6 @@ import {
   StyleSheet,
   Switch,
   Text,
-  TextInput,
   TouchableOpacity,
   View
 } from 'react-native';
@@ -169,6 +168,7 @@ export default function LocationScreen() {
   useEffect(() => {
     if (selectedPackage && selectedHours > 0) {
       calculatePricing();
+      handleBookPackage();
     }
   }, [selectedPackage, selectedHours]);
 
@@ -461,15 +461,15 @@ export default function LocationScreen() {
       return;
     }
 
-    if (!selectedPickupLocation) {
-      Alert.alert('Error', 'Please select pickup location');
-      return;
-    }
+    // if (!selectedPickupLocation) {
+    //   Alert.alert('Error', 'Please select pickup location');
+    //   return;
+    // }
 
-    if (!pickupAddress.trim()) {
-      Alert.alert('Error', 'Please enter pickup address');
-      return;
-    }
+    // if (!pickupAddress.trim()) {
+    //   Alert.alert('Error', 'Please enter pickup address');
+    //   return;
+    // }
 
     // Navigate to hourly confirmation screen
     router.push({
@@ -695,28 +695,29 @@ export default function LocationScreen() {
             <Text style={styles.continueButtonText}>Select Vehicle</Text>
             <MaterialCommunityIcons name="arrow-right" size={20} color="#ffffff" />
           </TouchableOpacity>
-        ) : (
-          <TouchableOpacity
-            style={[
-              styles.continueButton,
-              (!selectedPackage || bookingLoading) && styles.disabledButton
-            ]}
-            onPress={handleBookPackage}
-            disabled={!selectedPackage || bookingLoading}
-          >
-            {bookingLoading ? (
-              <>
-                <ActivityIndicator size="small" color="#ffffff" />
-                <Text style={styles.continueButtonText}>Loading...</Text>
-              </>
-            ) : (
-              <>
-                <Text style={styles.continueButtonText}>Continue</Text>
-                <MaterialCommunityIcons name="arrow-right" size={20} color="#ffffff" />
-              </>
-            )}
-          </TouchableOpacity>
-        )}
+            // ) : (
+            //   <TouchableOpacity
+            //     style={[
+            //       styles.continueButton,
+            //       (!selectedPackage || bookingLoading) && styles.disabledButton
+            //     ]}
+            //     onPress={handleBookPackage}
+            //     disabled={!selectedPackage || bookingLoading}
+            //   >
+            //     {bookingLoading ? (
+            //       <>
+            //         <ActivityIndicator size="small" color="#ffffff" />
+            //         <Text style={styles.continueButtonText}>Loading...</Text>
+            //       </>
+            //     ) : (
+            //       <>
+            //         <Text style={styles.continueButtonText}>Continue</Text>
+            //         <MaterialCommunityIcons name="arrow-right" size={20} color="#ffffff" />
+            //       </>
+            //     )}
+            //   </TouchableOpacity>
+            // )
+            ) : null}
       </View>
 
       <HireDriverButton
@@ -1098,7 +1099,7 @@ const styles = StyleSheet.create({
   },
   footer: {
     paddingHorizontal: 24,
-    paddingVertical: 20,
+    paddingVertical: 10,
     backgroundColor: '#ffffff',
     borderTopWidth: 1,
     borderTopColor: '#E5E7EB',
