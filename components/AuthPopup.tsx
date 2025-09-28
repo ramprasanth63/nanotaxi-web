@@ -202,44 +202,44 @@ export default function AuthPopup({ visible, onClose, onLoginSuccess, onGuestCon
     }
   };
 
-  const handleGuestLogin = async () => {
-    if (!guestContact.trim()) {
-      Alert.alert('Error', 'Please enter your email or mobile number');
-      return;
-    }
+  // const handleGuestLogin = async () => {
+  //   if (!guestContact.trim()) {
+  //     Alert.alert('Error', 'Please enter your email or mobile number');
+  //     return;
+  //   }
 
-    setLoading(true);
-    try {
-      let contact = guestContact.trim();
-      let type = guestContactType;
+  //   setLoading(true);
+  //   try {
+  //     let contact = guestContact.trim();
+  //     let type = guestContactType;
 
-      // Auto-detect if it's email or mobile
-      if (contact.includes('@')) {
-        type = 'email';
-      } else {
-        type = 'mobile';
-        if (!contact.startsWith('+91')) {
-          contact = `+91${contact}`;
-        }
-      }
+  //     // Auto-detect if it's email or mobile
+  //     if (contact.includes('@')) {
+  //       type = 'email';
+  //     } else {
+  //       type = 'mobile';
+  //       if (!contact.startsWith('+91')) {
+  //         contact = `+91${contact}`;
+  //       }
+  //     }
 
-      const response = await apiPost('/api/create_social_user/', {
-        contact,
-        type,
-      });
+  //     const response = await apiPost('/api/create_social_user/', {
+  //       contact,
+  //       type,
+  //     });
 
-      if (response.data.status === 'success') {
-        onLoginSuccess(response.data.customer_id.toString());
-        handleClose();
-      } else {
-        Alert.alert('Error', response.data.message || 'Failed to create guest account');
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to create guest account');
-    } finally {
-      setLoading(false);
-    }
-  };
+  //     if (response.data.status === 'success') {
+  //       onLoginSuccess(response.data.customer_id.toString());
+  //       handleClose();
+  //     } else {
+  //       Alert.alert('Error', response.data.message || 'Failed to create guest account');
+  //     }
+  //   } catch (error) {
+  //     Alert.alert('Error', 'Failed to create guest account');
+  //   } finally {
+  //     setLoading(false);
+  //   }
+  // };
 
   // if (guestMode) {
   //   return (
