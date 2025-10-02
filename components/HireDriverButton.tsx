@@ -69,7 +69,7 @@ const HireDriverButton: React.FC<HireDriverButtonProps> = ({ onPress, style }) =
   }, []);
 
   const handleCall = async () => {
-    const phoneNumber = '8508706369';
+    const phoneNumber = '8508706396';
     const url = Platform.OS === 'ios' ? `tel:${phoneNumber}` : `tel:${phoneNumber}`;
     
     try {
@@ -142,7 +142,7 @@ const HireDriverButton: React.FC<HireDriverButtonProps> = ({ onPress, style }) =
             <View style={styles.mainContent}>
               <Users size={24} color="#FFFFFF" />
               <View style={styles.textContainer}>
-                <Text style={styles.mainTitle}>Hire Professional Driver</Text>
+                <Text style={styles.mainTitle}>Get Active Drivers</Text>
                 <Text style={styles.subtitle}>Premium • Verified • 24/7 Available</Text>
                 <View style={styles.clickMoreContainer}>
                   <Text style={styles.clickMore}>Click to know more</Text>
@@ -365,7 +365,7 @@ export default HireDriverButton;
 
 // 📞 Dual Functionality:
 // - Main button: Navigate to hire driver screen
-// - Call button: Direct phone call to 8508706369
+// - Call button: Direct phone call to 8508706396
 
 // 💫 Premium Title:
 // "Hire Professional Driver"

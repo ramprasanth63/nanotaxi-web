@@ -1,31 +1,31 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { router } from 'expo-router';
 import {
-    ArrowLeft,
-    ArrowRight,
-    Award,
-    CheckCircle,
-    Clock,
-    Heart,
-    MapPin,
-    Phone,
-    Shield,
-    Star,
-    Users,
-    Zap,
+  ArrowLeft,
+  ArrowRight,
+  Award,
+  CheckCircle,
+  Clock,
+  Heart,
+  MapPin,
+  Phone,
+  Shield,
+  Star,
+  Users,
+  Zap,
 } from 'lucide-react-native';
 import React, { useEffect, useRef, useState } from 'react';
 import {
-    Animated,
-    Dimensions,
-    Linking,
-    Platform,
-    ScrollView,
-    StatusBar,
-    StyleSheet,
-    Text,
-    TouchableOpacity,
-    View,
+  Animated,
+  Dimensions,
+  Linking,
+  Platform,
+  ScrollView,
+  StatusBar,
+  StyleSheet,
+  Text,
+  TouchableOpacity,
+  View,
 } from 'react-native';
 
 const { width, height } = Dimensions.get('window');
@@ -69,7 +69,7 @@ const HireDriverScreen = () => {
   }, []);
 
   const handleCall = async () => {
-    const phoneNumber = '8508706369';
+    const phoneNumber = '8508706396';
     const url = Platform.OS === 'ios' ? `tel:${phoneNumber}` : `tel:${phoneNumber}`;
     
     try {
@@ -200,7 +200,7 @@ const HireDriverScreen = () => {
               <Animated.View style={styles.iconContainer}>
                 <Users size={40} color="#10B981" />
               </Animated.View>
-              <Text style={styles.headerTitle}>Hire a Professional Driver</Text>
+              <Text style={styles.headerTitle}>Get Active Drivers</Text>
               <Text style={styles.headerSubtitle}>
                 Your journey, our expertise
               </Text>
@@ -362,7 +362,7 @@ const HireDriverScreen = () => {
                 style={styles.phoneButtonGradient}
               >
                 <Phone size={24} color="#059669" />
-                <Text style={styles.phoneNumber}>8508706369</Text>
+                <Text style={styles.phoneNumber}>8508706396</Text>
                 <ArrowRight size={20} color="#059669" />
               </LinearGradient>
             </TouchableOpacity>
@@ -402,7 +402,7 @@ const HireDriverScreen = () => {
               style={styles.fixedCallGradient}
             >
               <Phone size={20} color="#FFFFFF" />
-              <Text style={styles.fixedCallText}>8508706369</Text>
+              <Text style={styles.fixedCallText}>8508706396</Text>
               <Text style={styles.fixedCallSubtext}>Tap to call</Text>
             </LinearGradient>
           </TouchableOpacity>

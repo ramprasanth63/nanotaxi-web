@@ -19,7 +19,9 @@ import {
 import HireDriverButton from '@/components/HireDriverButton';
 import LocationInputModal from '@/components/LocationInputModal';
 import TaxiLoading from '@/components/TaxiLoading';
+import PremiumModal from '@/components/ui/PremiumModal';
 import { useAuth } from '@/contexts/AuthContext';
+import { getGoogleDrivingDistance, getORSDrivingDistance } from '@/services/Distance';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
@@ -115,6 +117,11 @@ export default function LocationScreen() {
   const [showDatePicker, setShowDatePicker] = useState(false);
   const [showTimePicker, setShowTimePicker] = useState(false);
   const [bookingLoading, setBookingLoading] = useState(false);
+  const [showBelow100Modal, setShowBelow100Modal] = useState(false);
+
+    // Use Option A: parse location objects as JSON
+    let startLocation: Location;
+    let endLocation: Location;
 
   const [mapRegion, setMapRegion] = useState({
     latitude: 12.9716,
@@ -488,19 +495,37 @@ export default function LocationScreen() {
       Alert.alert('Error', 'Please select both pickup and destination locations');
       return;
     }
+    let dist;
 
-    router.push({
-      pathname: '/booking/vehicle-selection',
-      params: {
-        startLocationLabel: currentLocation.name,
-        startLocationLat: currentLocation.latitude,
-        startLocationLon: currentLocation.longitude,
-        endLocationLabel: destination.name,
-        endLocationLat: destination.latitude,
-        endLocationLon: destination.longitude,
-        roundTrip: roundTrip ? 'true' : 'false',
-      },
-    });
+    (async () => {
+      const startLocation = currentLocation;
+      const endLocation = destination;
+
+      dist = await getGoogleDrivingDistance({ start: startLocation, end: endLocation });
+
+      if (!dist || dist.distanceKm === 0) {
+        dist = await getORSDrivingDistance(startLocation, endLocation);
+      }
+      dist = (roundTrip ? dist * 2 : dist);
+      if (dist < 99) {
+        setShowBelow100Modal(true);
+        return;
+      }
+
+      router.push({
+        pathname: '/booking/vehicle-selection',
+        params: {
+          startLocationLabel: currentLocation.name,
+          startLocationLat: currentLocation.latitude,
+          startLocationLon: currentLocation.longitude,
+          endLocationLabel: destination.name,
+          endLocationLat: destination.latitude,
+          endLocationLon: destination.longitude,
+          roundTrip: roundTrip ? 'true' : 'false',
+          distanceKm: String(dist),
+        },
+      });
+    })();
   };
 
   if (loading) {
@@ -810,7 +835,13 @@ export default function LocationScreen() {
         iconColor="#10B981"
       />
 
-
+   <PremiumModal
+        visible={showBelow100Modal}
+        onClose={() => setShowBelow100Modal(false)}
+        onSelectHourly={() => {
+          // Handle hourly package selection
+          setBookingMode('hourly');
+        }}/>
 
     </SafeAreaView>
   );

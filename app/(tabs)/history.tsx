@@ -16,6 +16,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+
 export default function HistoryScreen() {
   const router = useRouter();
   const { bookingHistory, fetchBookingHistory, rateBooking } = useBooking();

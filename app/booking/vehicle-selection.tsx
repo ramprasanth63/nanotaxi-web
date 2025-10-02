@@ -14,8 +14,7 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-// Use the ORS Matrix API for real driving distance calculation
-const OPENROUTESERVICE_API_KEY = "eyJvcmciOiI1YjNjZTM1OTc4NTExMTAwMDFjZjYyNDgiLCJpZCI6ImY3MDRkYTQ3MWYxNDRiMTdiODBiMGViNzQwZTZiY2NjIiwiaCI6Im11cm11cjY0In0=";
+// Use the ORS Matrix API for real driving params.distanceKm calculation
 const GOOGLE_MAPS_API_KEY = "AIzaSyCy9vw9wy_eZeYd4BO9ifFiky2vOfvB-zc";
 export default function VehicleSelectionScreen() {
   const router = useRouter();
@@ -24,7 +23,6 @@ export default function VehicleSelectionScreen() {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
   const [fare, setFare] = useState<number | null>(null);
-  const [distance, setDistance] = useState<number | null>(null);
     const [showBreakdown, setShowBreakdown] = useState(false);
         const [pickupOption, setPickupOption] = useState<'now' | 'schedule'>('now');
     const [pickupDate, setPickupDate] = useState<Date | null>(null);
@@ -59,22 +57,13 @@ export default function VehicleSelectionScreen() {
 
   useEffect(() => {
     fetchVehicles();
-    // Calculate driving distance via ORS
-    (async () => {
-      let dist = await getGoogleDrivingDistance(startLocation, endLocation);
-
-      if (!dist || dist.distanceKm === 0) {
-        dist = await getORSDrivingDistance(startLocation, endLocation);
-      }
-      setDistance(dist);
-    })();
   }, []);
 
   useEffect(() => {
-    if (selectedVehicle && distance !== null) {
-      calculateFare(selectedVehicle, distance);
+    if (selectedVehicle && params.distanceKm !== null) {
+      calculateFare(selectedVehicle, params.distanceKm);
     }
-  }, [selectedVehicle, distance]);
+  }, [selectedVehicle, params.distanceKm]);
 
   const fetchVehicles = async () => {
     try {
@@ -142,63 +131,11 @@ export default function VehicleSelectionScreen() {
     }
   };
 
-  async function getGoogleDrivingDistance(start: Location, end: Location): Promise<number> {
-  try {
-    const url = `https://maps.googleapis.com/maps/api/distancematrix/json?origins=${start.latitude},${start.longitude}&destinations=${end.latitude},${end.longitude}&mode=driving&key=${GOOGLE_MAPS_API_KEY}`;
 
-    const response = await fetch(url);
-    const data = await response.json();
-
-    if (
-      data.rows &&
-      data.rows[0] &&
-      data.rows[0].elements &&
-      data.rows[0].elements[0] &&
-      data.rows[0].elements[0].distance
-    ) {
-      // Convert meters to kilometers
-      return data.rows[0].elements[0].distance.value / 1000;
-    }
-
-    return 0;
-  } catch (error) {
-    console.error("Google Driving Distance error:", error);
-    return 0;
-  }
-}
+  // Use ORS Matrix API for driving params.distanceKm!
 
 
-  // Use ORS Matrix API for driving distance!
-  async function getORSDrivingDistance(start: Location, end: Location): Promise<number> {
-    try {
-      const url = "https://api.openrouteservice.org/v2/matrix/driving-car";
-      const body = JSON.stringify({
-        locations: [
-          [start.longitude, start.latitude],
-          [end.longitude, end.latitude]
-        ],
-        metrics: ["distance"]
-      });
-      const response = await fetch(url, {
-        method: "POST",
-        headers: {
-          "Authorization": OPENROUTESERVICE_API_KEY,
-          "Content-Type": "application/json",
-        },
-        body,
-      });
-      const data = await response.json();
-      if (data.distances && data.distances[0] && data.distances[0][1]) {
-        return data.distances[0][1] / 1000; // meters to km
-      }
-      return 0;
-    } catch (error) {
-      console.error("ORS Driving Distance error:", error);
-      return 0;
-    }
-  }
-
-  // Calculate fare using driving distance
+  // Calculate fare using driving params.distanceKm
   const calculateFare = async (vehicle: Vehicle, dist: number) => {
     // console.log("Calculating fare for", vehicle.name, "over", dist, "km");
     try {
@@ -230,6 +167,7 @@ export default function VehicleSelectionScreen() {
         pickupDate: pickupDate ? pickupDate.toISOString() : null,
         pickupTime: pickupTime ? pickupTime.toISOString() : null,
         roundTrip: params.roundTrip as string | undefined || 'false',
+        distanceKm: params.distanceKm ? params.distanceKm.toString() : '0',
       },
     });
   };
@@ -267,10 +205,10 @@ export default function VehicleSelectionScreen() {
           <View style={[styles.routeIndicator, { backgroundColor: '#EF4444' }]} />
           <Text style={styles.routeText} numberOfLines={1}>{endLocation.name}</Text>
         </View>
-        {distance !== null && (
+        {params.distanceKm !== null && (
           <View style={styles.routeItem}>
             <MaterialCommunityIcons name="road" size={16} color="#6B7280" style={{ marginRight: 8 }} />
-            <Text style={styles.routeText} numberOfLines={1}>Distance: {distance.toFixed(1)} km</Text>
+            <Text style={styles.routeText} numberOfLines={1}>Distance: {params.distanceKm} km</Text>
           </View>
         )}
       </View>
@@ -407,8 +345,8 @@ export default function VehicleSelectionScreen() {
                 {selectedVehicle && fare && showBreakdown && (
           <View style={{ marginBottom: 12, backgroundColor: "#F3F4F6", borderRadius: 8, padding: 12 }}>
             <Text style={{ fontWeight: "bold", marginBottom: 4 }}>Price Breakdown:</Text>
-            <Text>Base Fare: ₹{distance && selectedVehicle ? Math.round(distance * selectedVehicle.pricePerKm) : 0}</Text>
-            <Text>Driver Fee: ₹{distance > 200 ? 300 : 0}</Text>
+            <Text>Base Fare: ₹{params.distanceKm && selectedVehicle ? Math.round(params.distanceKm * selectedVehicle.pricePerKm) : 0}</Text>
+            <Text>Driver Fee: ₹{params.distanceKm > 200 ? 300 : 0}</Text>
             <Text style={{ fontWeight: "bold", marginTop: 6 }}>
               Total: ₹{fare}
             </Text>
