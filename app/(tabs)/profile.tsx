@@ -45,12 +45,12 @@ export default function ProfileScreen() {
   const handleSupportCall = () => {
     Alert.alert(
       'Call Support',
-      'Call our support team at +91 85087 06396?',
+      'Call our support team at +91 9840407707?',
       [
         { text: 'Cancel', style: 'cancel' },
         { 
           text: 'Call', 
-          onPress: () => Linking.openURL('tel:+918508706396') 
+          onPress: () => Linking.openURL('tel:+919840407707') 
         },
       ]
     );
@@ -112,44 +112,44 @@ export default function ProfileScreen() {
     {
       title: 'Support',
       items: [
-        {
-          icon: <MaterialCommunityIcons name="help-circle" size={20} color="#6B7280" />,
-          label: 'Help Center',
-          value: 'FAQs and guides',
-          onPress: () => Alert.alert('Help Center', 'Help center will be available soon!'),
-        },
-        {
-          icon: <MaterialCommunityIcons name="message-text" size={20} color="#6B7280" />,
-          label: 'Send Message',
-          value: 'Contact support',
-          onPress: () => Alert.alert('Message', 'Message will be available soon!'),
-          // onPress: () => setShowSupport(true),
-        },
+        // {
+        //   icon: <MaterialCommunityIcons name="help-circle" size={20} color="#6B7280" />,
+        //   label: 'Help Center',
+        //   value: 'FAQs and guides',
+        //   onPress: () => Alert.alert('Help Center', 'Help center will be available soon!'),
+        // },
+        // {
+        //   icon: <MaterialCommunityIcons name="message-text" size={20} color="#6B7280" />,
+        //   label: 'Send Message',
+        //   value: 'Contact support',
+        //   onPress: () => Alert.alert('Message', 'Message will be available soon!'),
+        //   // onPress: () => setShowSupport(true),
+        // },
         {
           icon: <MaterialCommunityIcons name="phone" size={20} color="#6B7280" />,
           label: 'Call Support',
-          value: '+91 85087 06396',
+          value: '+91 9840407707',
           onPress: handleSupportCall,
         },
       ],
     },
-    {
-      title: 'App',
-      items: [
-        {
-          icon: <MaterialCommunityIcons name="star" size={20} color="#6B7280" />,
-          label: 'Rate App',
-          value: 'Rate us on app store',
-          onPress: () => Alert.alert('Rate App', 'Thank you for your feedback!'),
-        },
-        {
-          icon: <MaterialCommunityIcons name="cog" size={20} color="#6B7280" />,
-          label: 'Settings',
-          value: 'App preferences',
-          onPress: () => Alert.alert('Settings', 'Settings will be available soon!'),
-        },
-      ],
-    },
+    // {
+    //   title: 'App',
+    //   items: [
+    //     {
+    //       icon: <MaterialCommunityIcons name="star" size={20} color="#6B7280" />,
+    //       label: 'Rate App',
+    //       value: 'Rate us on app store',
+    //       onPress: () => Alert.alert('Rate App', 'Thank you for your feedback!'),
+    //     },
+    //     {
+    //       icon: <MaterialCommunityIcons name="cog" size={20} color="#6B7280" />,
+    //       label: 'Settings',
+    //       value: 'App preferences',
+    //       onPress: () => Alert.alert('Settings', 'Settings will be available soon!'),
+    //     },
+    //   ],
+    // },
   ];
 
   const renderProfileItem = (item: any, index: number) => (
@@ -277,7 +277,7 @@ export default function ProfileScreen() {
 
         <View style={styles.appInfo}>
           <Text style={styles.appTitle}>NANO Taxi</Text>
-          <Text style={styles.appVersion}>Version 1.0.0</Text>
+          {/* <Text style={styles.appVersion}>Version 1.0.0</Text> */}
           <Text style={styles.appDescription}>
             Your reliable ride booking companion
           </Text>

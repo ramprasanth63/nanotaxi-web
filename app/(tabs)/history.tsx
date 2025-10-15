@@ -1,3 +1,4 @@
+import InvoiceGenerator from '@/components/InvoiceGenerator'; // Adjust path as needed
 import TaxiLoading from '@/components/TaxiLoading';
 import { useAuth } from '@/contexts/AuthContext';
 import { useBooking } from '@/contexts/BookingContext';
@@ -24,6 +25,9 @@ export default function HistoryScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [loading, setLoading] = useState(true);
   const [packageHistory, setPackageHistory] = useState([]);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [selectedInvoice, setSelectedInvoice] = useState<any>(null);
+
 
   useEffect(() => {
     let isMounted = true;
@@ -76,6 +80,11 @@ export default function HistoryScreen() {
     setRefreshing(false);
   };
 
+  const handleShareInvoice = (booking: any) => {
+  setSelectedInvoice(booking);
+  setShowInvoiceModal(true);
+};
+
   const handleRateRide = (booking: Booking) => {
     Alert.alert(
       'Rate this ride',
@@ -112,6 +121,14 @@ export default function HistoryScreen() {
         <View style={[styles.statusBadge, { backgroundColor: '#10B981' }]}>
           <Text style={styles.statusText}>COMPLETED PACKAGE</Text>
         </View>
+
+        <TouchableOpacity
+  style={styles.shareIconButton}
+  onPress={() => handleShareInvoice(booking)}
+>
+  <MaterialCommunityIcons name="share-variant" size={20} color="#10B981" />
+</TouchableOpacity>
+
       </View>
 
       <View style={styles.routeContainer}>
@@ -232,6 +249,15 @@ export default function HistoryScreen() {
             {booking.round_trip === true || booking.round_trip === 'true' ? ' ROUND TRIP' : ''}
           </Text>
         </View>
+
+        <TouchableOpacity
+  style={styles.shareIconButton}
+  onPress={() => handleShareInvoice(booking)}
+>
+  <MaterialCommunityIcons name="share-variant" size={20} color="#3B82F6" />
+</TouchableOpacity>
+
+
       </View>
 
       <View style={styles.routeContainer}>
@@ -417,6 +443,20 @@ export default function HistoryScreen() {
           allHistory.map(renderHistoryCard)
         )}
       </ScrollView>
+
+
+      {showInvoiceModal && selectedInvoice && (
+  <InvoiceGenerator
+    booking={selectedInvoice}
+    visible={showInvoiceModal}
+    onClose={() => {
+      setShowInvoiceModal(false);
+      setSelectedInvoice(null);
+    }}
+  />
+)}
+
+
     </SafeAreaView>
   );
 }
@@ -693,4 +733,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
   },
+  shareIconButton: {
+  padding: 8,
+  backgroundColor: '#F0FDF4',
+  borderRadius: 8,
+  marginLeft: 8,
+},
 });

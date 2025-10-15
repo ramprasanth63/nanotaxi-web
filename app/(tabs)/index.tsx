@@ -1,8 +1,9 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { useRouter } from 'expo-router';
-import React from 'react';
+import React, { useState } from 'react';
 import {
   Image,
+  Linking,
   StyleSheet,
   Text,
   TouchableOpacity,
@@ -15,6 +16,19 @@ import LocationScreen from '../booking/location';
 export default function HomeScreen() {
   const { user, isLoggedIn } = useAuth();
   const router = useRouter();
+
+  // Add this state at the top of your component
+  const [language, setLanguage] = useState<'en' | 'ta'>('en');
+
+  // Add this function to handle language change
+  const toggleLanguage = () => {
+    setLanguage(prev => prev === 'en' ? 'ta' : 'en');
+  };
+
+  // Add this function to handle opening browser link
+  const openPlansAndPricing = () => {
+    Linking.openURL('https://nanotaxibooking.com');  // Replace with your actual URL
+  };
 
   return (
     <SafeAreaView style={styles.container}>
@@ -37,7 +51,45 @@ export default function HomeScreen() {
             <MaterialCommunityIcons name="account" size={24} color="#6B7280" />
           )}
         </TouchableOpacity>
+     </View>
+
+      <View style={styles.topToolbar}>
+        <TouchableOpacity 
+          style={styles.plansButton}
+          onPress={openPlansAndPricing}
+        >
+          <Text style={styles.plansButtonText}>Plans & Pricing Info</Text>
+        </TouchableOpacity>
+      
+        {/* <View style={styles.languageToggle}>
+          <TouchableOpacity 
+            style={[
+              styles.languageButton,
+              language === 'en' && styles.languageButtonActive
+            ]}
+            onPress={() => setLanguage('en')}
+          >
+            <Text style={[
+              styles.languageText,
+              language === 'en' && styles.languageTextActive
+            ]}>EN</Text>
+          </TouchableOpacity>
+          <TouchableOpacity 
+            style={[
+              styles.languageButton,
+              language === 'ta' && styles.languageButtonActive
+            ]}
+            onPress={() => setLanguage('ta')}
+          >
+            <Text style={[
+              styles.languageText,
+              language === 'ta' && styles.languageTextActive
+            ]}>தமிழ்</Text>
+          </TouchableOpacity>
+        </View> */}
       </View>
+
+       
 
       {/* <View style={styles.content}>
         <View style={styles.heroSection}>
@@ -188,5 +240,51 @@ const styles = StyleSheet.create({
     fontSize: 14,
     color: '#6B7280',
     textAlign: 'center',
+  },
+  topToolbar: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    backgroundColor: '#fff',
+  },
+  plansButton: {
+    backgroundColor: '#16A349',
+    paddingVertical: 8,
+    paddingHorizontal: 16,
+    borderRadius: 8,
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.2,
+    shadowRadius: 2,
+  },
+  plansButtonText: {
+    color: '#fff',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  languageToggle: {
+    flexDirection: 'row',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    padding: 2,
+  },
+  languageButton: {
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  languageButtonActive: {
+    backgroundColor: '#16A349',
+  },
+  languageText: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#6b7280',
+  },
+  languageTextActive: {
+    color: '#fff',
   },
 });

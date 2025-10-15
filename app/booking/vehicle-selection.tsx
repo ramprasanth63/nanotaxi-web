@@ -1,5 +1,5 @@
 import TaxiLoading from '@/components/TaxiLoading';
-import { apiPost, fetchBaseURL } from '@/services/apiClient';
+import { apiGet, apiPost, fetchBaseURL } from '@/services/apiClient';
 import { Location, Vehicle } from '@/types';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -14,8 +14,9 @@ import {
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
-// Use the ORS Matrix API for real driving params.distanceKm calculation
+
 const GOOGLE_MAPS_API_KEY = "AIzaSyCy9vw9wy_eZeYd4BO9ifFiky2vOfvB-zc";
+
 export default function VehicleSelectionScreen() {
   const router = useRouter();
   const params = useLocalSearchParams();
@@ -23,14 +24,14 @@ export default function VehicleSelectionScreen() {
   const [selectedVehicle, setSelectedVehicle] = useState<Vehicle | null>(null);
   const [loading, setLoading] = useState(true);
   const [fare, setFare] = useState<number | null>(null);
-    const [showBreakdown, setShowBreakdown] = useState(false);
-        const [pickupOption, setPickupOption] = useState<'now' | 'schedule'>('now');
-    const [pickupDate, setPickupDate] = useState<Date | null>(null);
-    const [pickupTime, setPickupTime] = useState<Date | null>(null);
-    const [showDatePicker, setShowDatePicker] = useState(false);
-    const [showTimePicker, setShowTimePicker] = useState(false);
+  const [showBreakdown, setShowBreakdown] = useState(false);
+  const [pickupOption, setPickupOption] = useState<'now' | 'schedule'>('now');
+  const [pickupDate, setPickupDate] = useState<Date | null>(null);
+  const [pickupTime, setPickupTime] = useState<Date | null>(null);
+  const [showDatePicker, setShowDatePicker] = useState(false);
+  const [showTimePicker, setShowTimePicker] = useState(false);
+  const [gstAmount, setGstAmount] = useState<number>(100);
 
-  // Use Option A: parse location objects as JSON
   let startLocation: Location;
   let endLocation: Location;
 
@@ -38,7 +39,6 @@ export default function VehicleSelectionScreen() {
     startLocation = JSON.parse(params.startLocation as string);
     endLocation = JSON.parse(params.endLocation as string);
   } catch (e) {
-    // fallback: reconstruct from individual params if needed
     startLocation = {
       name: (params.startLocationLabel as string) || "",
       latitude: Number(params.startLocationLat),
@@ -57,17 +57,17 @@ export default function VehicleSelectionScreen() {
 
   useEffect(() => {
     fetchVehicles();
+    fetchFixedCharges();
   }, []);
 
   useEffect(() => {
     if (selectedVehicle && params.distanceKm !== null) {
       calculateFare(selectedVehicle, params.distanceKm);
     }
-  }, [selectedVehicle, params.distanceKm]);
+  }, [selectedVehicle, params.distanceKm, gstAmount]);
 
   const fetchVehicles = async () => {
     try {
-      // Use apiPost for vehicle availability
       console.log("Fetching available vehicles...", {
         start_point: startLocation.name,
         end_point: endLocation.name,
@@ -79,18 +79,13 @@ export default function VehicleSelectionScreen() {
           end_point: endLocation.name,
         }
       );
-      // console.log("Vehicle fetch response:", response.data);
       const baseurl = await fetchBaseURL();
-      // console.log("Base URL for images:", baseurl);
-      // add baseurl to vehicle image URLs
       const vehiclesWithImages = response.data.available_vehicles.map((vehicle: Vehicle) => ({
         ...vehicle,
         image: `${baseurl}${vehicle.image}`,
       }));
       setVehicles(vehiclesWithImages);
     } catch (error) {
-      // console.error('Vehicle fetch error:', error);
-      // Mock vehicles for demo
       const mockVehicles: Vehicle[] = [
         {
           id: '1',
@@ -131,19 +126,26 @@ export default function VehicleSelectionScreen() {
     }
   };
 
-
-  // Use ORS Matrix API for driving params.distanceKm!
-
-
-  // Calculate fare using driving params.distanceKm
-  const calculateFare = async (vehicle: Vehicle, dist: number) => {
-    // console.log("Calculating fare for", vehicle.name, "over", dist, "km");
+  const fetchFixedCharges = async () => {
     try {
-      // Try your fare API first
+      const response = await apiGet('/api/list_fixed_charges/');
+      if (response.data && response.data.data) {
+        const gstCharge = response.data.data.find((charge: any) => charge.name === 'GST');
+        if (gstCharge && gstCharge.amount) {
+          setGstAmount(parseFloat(gstCharge.amount));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching fixed charges:', error);
+    }
+  };
+
+  const calculateFare = async (vehicle: Vehicle, dist: number) => {
+    try {
       try {
         const baseFare = dist * vehicle.pricePerKm;
         const driverFee = dist > 200 ? 300 : 0;
-        const totalFare = baseFare + driverFee;
+        const totalFare = baseFare + driverFee + gstAmount;
         setFare(Math.round(totalFare));
       } catch (error) {
         console.error('Fare API error, using local calc:', error);
@@ -213,102 +215,97 @@ export default function VehicleSelectionScreen() {
         )}
       </View>
 
+      <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+        <TouchableOpacity
+          style={{
+            backgroundColor: pickupOption === 'now' ? '#10B981' : '#F3F4F6',
+            paddingVertical: 10,
+            paddingHorizontal: 18,
+            borderRadius: 8,
+            marginRight: 12,
+          }}
+          onPress={() => setPickupOption('now')}
+        >
+          <Text style={{ color: pickupOption === 'now' ? '#fff' : '#10B981', fontWeight: 'bold' }}>
+            Now
+          </Text>
+        </TouchableOpacity>
+        <TouchableOpacity
+          style={{
+            backgroundColor: pickupOption === 'schedule' ? '#10B981' : '#F3F4F6',
+            paddingVertical: 10,
+            paddingHorizontal: 18,
+            borderRadius: 8,
+          }}
+          onPress={() => setPickupOption('schedule')}
+        >
+          <Text style={{ color: pickupOption === 'schedule' ? '#fff' : '#10B981', fontWeight: 'bold' }}>
+            Select Date & Pickup Time
+          </Text>
+        </TouchableOpacity>
+      </View>
 
-<View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
-  <TouchableOpacity
-    style={{
-      backgroundColor: pickupOption === 'now' ? '#10B981' : '#F3F4F6',
-      paddingVertical: 10,
-      paddingHorizontal: 18,
-      borderRadius: 8,
-      marginRight: 12,
-    }}
-    onPress={() => setPickupOption('now')}
-  >
-    <Text style={{ color: pickupOption === 'now' ? '#fff' : '#10B981', fontWeight: 'bold' }}>
-      Now
-    </Text>
-  </TouchableOpacity>
-  <TouchableOpacity
-    style={{
-      backgroundColor: pickupOption === 'schedule' ? '#10B981' : '#F3F4F6',
-      paddingVertical: 10,
-      paddingHorizontal: 18,
-      borderRadius: 8,
-    }}
-    onPress={() => setPickupOption('schedule')}
-  >
-    <Text style={{ color: pickupOption === 'schedule' ? '#fff' : '#10B981', fontWeight: 'bold' }}>
-      Select Date & Pickup Time
-    </Text>
-  </TouchableOpacity>
-</View>
+      {pickupOption === 'schedule' && (
+        <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#F3F4F6',
+              padding: 10,
+              borderRadius: 8,
+              alignItems: 'center',
+              marginRight: 12,
+              minWidth: 110,
+            }}
+            onPress={() => setShowDatePicker(true)}
+          >
+            <Text style={{ color: '#10B981', fontWeight: 'bold' }}>
+              {pickupDate ? pickupDate.toLocaleDateString() : 'Pick Date'}
+            </Text>
+          </TouchableOpacity>
+          {showDatePicker && (
+            <DateTimePicker
+              value={pickupDate || new Date()}
+              mode="date"
+              display="default"
+              onChange={(event, date) => {
+                setShowDatePicker(false);
+                if (event.type === 'set' && date) {
+                  setPickupDate(date);
+                }
+              }}
+              minimumDate={new Date()}
+            />
+          )}
 
-{pickupOption === 'schedule' && (
-  <View style={{ flexDirection: 'row', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
-    {/* Date Picker */}
-    <TouchableOpacity
-      style={{
-        backgroundColor: '#F3F4F6',
-        padding: 10,
-        borderRadius: 8,
-        alignItems: 'center',
-        marginRight: 12,
-        minWidth: 110,
-      }}
-      onPress={() => setShowDatePicker(true)}
-    >
-      <Text style={{ color: '#10B981', fontWeight: 'bold' }}>
-        {pickupDate ? pickupDate.toLocaleDateString() : 'Pick Date'}
-      </Text>
-    </TouchableOpacity>
-    {showDatePicker && (
-      <DateTimePicker
-        value={pickupDate || new Date()}
-        mode="date"
-        display="default"
-        onChange={(event, date) => {
-          setShowDatePicker(false);
-          if (event.type === 'set' && date) {
-            setPickupDate(date);
-          }
-        }}
-        minimumDate={new Date()}
-      />
-    )}
-
-    {/* Time Picker */}
-    <TouchableOpacity
-      style={{
-        backgroundColor: '#F3F4F6',
-        padding: 10,
-        borderRadius: 8,
-        alignItems: 'center',
-        minWidth: 110,
-      }}
-      onPress={() => setShowTimePicker(true)}
-    >
-      <Text style={{ color: '#10B981', fontWeight: 'bold' }}>
-        {pickupTime ? pickupTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pick Time'}
-      </Text>
-    </TouchableOpacity>
-    {showTimePicker && (
-      <DateTimePicker
-        value={pickupTime || new Date()}
-        mode="time"
-        display="default"
-        onChange={(event, date) => {
-          setShowTimePicker(false);
-          if (event.type === 'set' && date) {
-            setPickupTime(date);
-          }
-        }}
-      />
-    )}
-  </View>
-)}
-
-
+          <TouchableOpacity
+            style={{
+              backgroundColor: '#F3F4F6',
+              padding: 10,
+              borderRadius: 8,
+              alignItems: 'center',
+              minWidth: 110,
+            }}
+            onPress={() => setShowTimePicker(true)}
+          >
+            <Text style={{ color: '#10B981', fontWeight: 'bold' }}>
+              {pickupTime ? pickupTime.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Pick Time'}
+            </Text>
+          </TouchableOpacity>
+          {showTimePicker && (
+            <DateTimePicker
+              value={pickupTime || new Date()}
+              mode="time"
+              display="default"
+              onChange={(event, date) => {
+                setShowTimePicker(false);
+                if (event.type === 'set' && date) {
+                  setPickupTime(date);
+                }
+              }}
+            />
+          )}
+        </View>
+      )}
 
       <ScrollView style={styles.vehicleList} showsVerticalScrollIndicator={false}>
         {vehicles.map((vehicle) => (
@@ -326,32 +323,27 @@ export default function VehicleSelectionScreen() {
               <View style={styles.vehicleDetails}>
                 <MaterialCommunityIcons name="account-group" size={16} color="#6B7280" />
                 <Text style={styles.vehicleCapacity}>{vehicle.capacity} seats</Text>
-                {/* <MaterialCommunityIcons name="clock-outline" size={16} color="#6B7280" style={{ marginLeft: 12 }} /> */}
-                {/* <Text style={styles.vehicleTime}>2-5 min</Text> */}
               </View>
             </View>
             <View style={styles.vehiclePrice}>
               <Text style={styles.priceText}>₹{vehicle.pricePerKm}/km</Text>
-              {/* {selectedVehicle?.id === vehicle.id && fare && (
-                <Text style={styles.totalFare}>Total: ₹{fare}</Text>
-              )} */}
             </View>
           </TouchableOpacity>
         ))}
       </ScrollView>
 
       <View style={styles.footer}>
-        {/* Price breakdown above buttons */}
-                {selectedVehicle && fare && showBreakdown && (
+        {selectedVehicle && fare && showBreakdown && (
           <View style={{ marginBottom: 12, backgroundColor: "#F3F4F6", borderRadius: 8, padding: 12 }}>
             <Text style={{ fontWeight: "bold", marginBottom: 4 }}>Price Breakdown:</Text>
             <Text>Base Fare: ₹{params.distanceKm && selectedVehicle ? Math.round(params.distanceKm * selectedVehicle.pricePerKm) : 0}</Text>
             <Text>Driver Fee: ₹{params.distanceKm > 200 ? 300 : 0}</Text>
+            <Text>GST: ₹{gstAmount}</Text>
             <Text style={{ fontWeight: "bold", marginTop: 6 }}>
               Total: ₹{fare}
             </Text>
             <Text style={{ color: '#6B7280', fontSize: 12, marginTop: 4 }}>
-              Price is inclusive of GST and exclusive of toll.
+              Price is inclusive of GST and exclusive of toll and permit.
             </Text>
           </View>
         )}

@@ -874,7 +874,8 @@ export default function LocationScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: 'transparent',
+    marginTop: -25,
   },
   scrollContainer: {
     flex: 1,
@@ -1202,4 +1203,5 @@ const styles = StyleSheet.create({
   actionButton: {
     padding: 4,
   },
+  
 });

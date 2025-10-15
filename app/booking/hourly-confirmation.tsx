@@ -1,7 +1,7 @@
 import AuthPopup from '@/components/AuthPopup';
 import LocationInputModal from '@/components/LocationInputModal';
 import { useAuth } from '@/contexts/AuthContext';
-import { apiPost } from '@/services/apiClient';
+import { apiGet, apiPost } from '@/services/apiClient';
 import { Location as LocationType } from '@/types';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -45,6 +45,8 @@ export default function HourlyConfirmationScreen() {
   const [selectedHours, setSelectedHours] = useState(0);
   const [calculatedKm, setCalculatedKm] = useState(0);
   const [totalPrice, setTotalPrice] = useState(0);
+  const [selectedKm, setSelectedKm] = useState(0);
+  const [gstAmount, setGstAmount] = useState<number>(100);
   
   // Location and form states
   const [pickupPlace, setPickupPlace] = useState('');
@@ -78,6 +80,9 @@ export default function HourlyConfirmationScreen() {
   useEffect(() => {
     isMounted.current = true;
     
+    // Fetch fixed charges including GST
+    fetchFixedCharges();
+    
     // Initialize only if we haven't set hours yet
     if (selectedPackage && selectedHours === 0) {
       console.log('Initializing with package hours:', selectedPackage.package_hours);
@@ -85,10 +90,15 @@ export default function HourlyConfirmationScreen() {
       calculatePricing(selectedPackage.package_hours);
     }
 
+    // Initialize selectedKm
+    if (selectedPackage && selectedKm === 0) {
+      setSelectedKm(selectedPackage.package_km);
+    }
+
     return () => {
       isMounted.current = false;
     };
-  }, []); // Empty dependency - only run once on mount
+  }, []);
 
   useEffect(() => {
     if (pickupPlace.length > 2 && editingPickup) {
@@ -98,14 +108,30 @@ export default function HourlyConfirmationScreen() {
     }
   }, [pickupPlace, editingPickup]);
 
-  // Add this useEffect after your existing useEffects to debug:
-  useEffect(() => {
-    console.log('selectedHours state changed to:', selectedHours);
-  }, [selectedHours]);
-
   useEffect(() => {
     console.log('totalPrice state changed to:', totalPrice);
   }, [totalPrice]);
+
+  // Recalculate pricing when GST amount changes
+  useEffect(() => {
+    if (selectedHours > 0) {
+      calculatePricing(selectedHours);
+    }
+  }, [gstAmount]);
+
+  const fetchFixedCharges = async () => {
+    try {
+      const response = await apiGet('/api/list_fixed_charges/');
+      if (response.data && response.data.data) {
+        const gstCharge = response.data.data.find((charge: any) => charge.name === 'GST');
+        if (gstCharge && gstCharge.amount) {
+          setGstAmount(parseFloat(gstCharge.amount));
+        }
+      }
+    } catch (error) {
+      console.error('Error fetching fixed charges:', error);
+    }
+  };
 
   const searchLocationsByGoogle = async (query: string) => {
     if (!isMounted.current) return;
@@ -234,10 +260,8 @@ export default function HourlyConfirmationScreen() {
     const baseKm = selectedPackage.package_km;
     const basePrice = parseFloat(selectedPackage.package_price);
     const extraHrRate = parseFloat(selectedPackage.extra_hr_rate);
+    const extraKmRate = parseFloat(selectedPackage.extra_km_rate);
     
-    // Calculate KM based on proportional hours
-    const kmPerHour = baseKm / baseHours;
-    let totalKm = Math.round(kmPerHour * hours);
     let price = basePrice;
 
     // If hours exceed base package hours, add extra hour charges
@@ -246,17 +270,26 @@ export default function HourlyConfirmationScreen() {
       price += extraHours * extraHrRate;
     }
 
+    // If km exceeds base package km, add extra km charges
+    if (selectedKm > baseKm) {
+      const extraKm = selectedKm - baseKm;
+      price += extraKm * extraKmRate;
+    }
+
+    // Add GST
+    price += gstAmount;
+
     console.log('Calculating pricing:', {
       hours,
       baseHours,
       baseKm,
-      totalKm,
       basePrice,
       extraHrRate,
+      gstAmount,
       finalPrice: price
     });
 
-    setCalculatedKm(totalKm);
+    setCalculatedKm(baseKm);
     setTotalPrice(price);
   };
 
@@ -273,19 +306,35 @@ export default function HourlyConfirmationScreen() {
       newHours = selectedHours + 1;
       console.log('Incrementing hours from', selectedHours, 'to', newHours);
     } else {
-      // Don't allow reducing below the package's minimum hours
       newHours = Math.max(minHours, selectedHours - 1);
       console.log('Decrementing hours from', selectedHours, 'to', newHours, 'min:', minHours);
     }
     
-    // Only update if the value actually changes
     if (newHours !== selectedHours) {
       console.log('Setting new hours:', newHours);
       setSelectedHours(newHours);
-      // Calculate pricing with the new hours value directly
       calculatePricing(newHours);
     } else {
       console.log('Hours unchanged, not updating');
+    }
+  };
+
+  const adjustKilometers = (increment: boolean) => {
+    if (!selectedPackage) return;
+
+    const baseKm = selectedPackage.package_km;
+    
+    let newKm;
+    if (increment) {
+      newKm = selectedKm + 1;
+    } else {
+      newKm = Math.max(baseKm, selectedKm - 1);
+    }
+
+    if (newKm !== selectedKm) {
+      setSelectedKm(newKm);
+      // Recalculate with current hours
+      calculatePricing(selectedHours);
     }
   };
 
@@ -304,7 +353,6 @@ export default function HourlyConfirmationScreen() {
   };
 
   const handleBookPackage = async (customerId?: string) => {
-    // Validation
     if (!selectedPickupLocation) {
       Alert.alert('Error', 'Please select pickup location');
       return;
@@ -328,12 +376,12 @@ export default function HourlyConfirmationScreen() {
         customer_id: customerIdToUse,
         vehicle_type: selectedPackage.vehicle_model,
         total_hours_booked: selectedHours,
-        total_km_booked: calculatedKm,
+        total_km_booked: selectedKm,
         toll_amount: 0,
         parking_fee: 0,
         no_of_nights: 1,
         night_halt_charges: 0,
-        base_amount: totalPrice,
+        base_amount: totalPrice - gstAmount,
         total_amount: totalPrice,
         date_of_travel: dateOfTravel.toISOString().split('T')[0],
         pickup_time: pickupTime.toTimeString().split(' ')[0],
@@ -365,15 +413,10 @@ export default function HourlyConfirmationScreen() {
   const handleAuthSuccess = (customerId: string) => {
     setGuestCustomerId(customerId);
     setShowAuthPopup(false);
-    // Automatically proceed with booking after successful auth
-    // setTimeout(() => {
-    //   handleBookPackage(customerId);
-    // }, 500);
   };
 
   const handleGuestContinue = () => {
     setShowAuthPopup(false);
-    // Guest flow is handled within the AuthPopup component
   };
 
   return (
@@ -409,57 +452,113 @@ export default function HourlyConfirmationScreen() {
           </View>
         </View>
 
-        {/* Hour Selection */}
+        {/* Package Configuration */}
         <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Select Hours</Text>
-          <View style={styles.hourSelectionContainer}>
-            <View style={styles.hourAdjuster}>
-              <TouchableOpacity
-                style={[
-                  styles.hourButton,
-                  selectedHours <= selectedPackage.package_hours && styles.disabledHourButton
-                ]}
-                onPress={() => adjustHours(false)}
-                disabled={selectedHours <= selectedPackage.package_hours}
-              >
-                <MaterialCommunityIcons 
-                  name="minus" 
-                  size={24} 
-                  color={selectedHours <= selectedPackage.package_hours ? "#9CA3AF" : "#10B981"} 
-                />
-              </TouchableOpacity>
-              <View style={styles.hourDisplay}>
-                <Text style={styles.hourText}>{selectedHours} Hours</Text>
-                <Text style={styles.minHourText}>Min: {selectedPackage.package_hours}h</Text>
+          <Text style={styles.sectionTitle}>Package Configuration</Text>
+          <View style={styles.configurationCard}>
+            {/* Hours Selection */}
+            <View style={styles.configRow}>
+              <View style={styles.configLabel}>
+                <MaterialCommunityIcons name="clock-outline" size={20} color="#10B981" />
+                <Text style={styles.configLabelText}>Hours</Text>
               </View>
-              <TouchableOpacity
-                style={styles.hourButton}
-                onPress={() => adjustHours(true)}
-              >
-                <MaterialCommunityIcons name="plus" size={24} color="#10B981" />
-              </TouchableOpacity>
+              <View style={styles.adjustmentControl}>
+                <TouchableOpacity
+                  style={[
+                    styles.adjustButton,
+                    selectedHours <= selectedPackage.package_hours && styles.disabledButton
+                  ]}
+                  onPress={() => adjustHours(false)}
+                  disabled={selectedHours <= selectedPackage.package_hours}
+                >
+                  <MaterialCommunityIcons 
+                    name="minus" 
+                    size={20} 
+                    color={selectedHours <= selectedPackage.package_hours ? "#9CA3AF" : "#10B981"} 
+                  />
+                </TouchableOpacity>
+                <View style={styles.valueDisplay}>
+                  <Text style={styles.valueText}>{selectedHours}h</Text>
+                  <Text style={styles.minValueText}>min: {selectedPackage.package_hours}h</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.adjustButton}
+                  onPress={() => adjustHours(true)}
+                >
+                  <MaterialCommunityIcons name="plus" size={20} color="#10B981" />
+                </TouchableOpacity>
+              </View>
             </View>
-            <View style={styles.calculationDetails}>
-              <View style={styles.calculationRow}>
-                <Text style={styles.calculationLabel}>Base Package:</Text>
-                <Text style={styles.calculationValue}>₹{selectedPackage.package_price}</Text>
+
+            <View style={styles.divider} />
+
+            {/* Kilometers Selection */}
+            <View style={styles.configRow}>
+              <View style={styles.configLabel}>
+                <MaterialCommunityIcons name="map-marker-distance" size={20} color="#10B981" />
+                <Text style={styles.configLabelText}>Distance</Text>
+              </View>
+              <View style={styles.adjustmentControl}>
+                <TouchableOpacity
+                  style={[
+                    styles.adjustButton,
+                    selectedKm <= selectedPackage.package_km && styles.disabledButton
+                  ]}
+                  onPress={() => adjustKilometers(false)}
+                  disabled={selectedKm <= selectedPackage.package_km}
+                >
+                  <MaterialCommunityIcons 
+                    name="minus" 
+                    size={20} 
+                    color={selectedKm <= selectedPackage.package_km ? "#9CA3AF" : "#10B981"} 
+                  />
+                </TouchableOpacity>
+                <View style={styles.valueDisplay}>
+                  <Text style={styles.valueText}>{selectedKm}km</Text>
+                  <Text style={styles.minValueText}>min: {selectedPackage.package_km}km</Text>
+                </View>
+                <TouchableOpacity
+                  style={styles.adjustButton}
+                  onPress={() => adjustKilometers(true)}
+                >
+                  <MaterialCommunityIcons name="plus" size={20} color="#10B981" />
+                </TouchableOpacity>
+              </View>
+            </View>
+
+            {/* Price Breakdown */}
+            <View style={styles.priceBreakdown}>
+              <View style={styles.priceRow}>
+                <Text style={styles.priceLabel}>Base Package</Text>
+                <Text style={styles.priceValue}>₹{selectedPackage.package_price}</Text>
+              </View>
+              <View style={styles.priceRow}>
+                <Text style={styles.priceLabel}>GST</Text>
+                <Text style={styles.priceValue}>₹{gstAmount}</Text>
               </View>
               {selectedHours > selectedPackage.package_hours && (
-                <View style={styles.calculationRow}>
-                  <Text style={styles.calculationLabel}>
-                    Extra Hours ({selectedHours - selectedPackage.package_hours}h × ₹{selectedPackage.extra_hr_rate}):
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceLabel}>
+                    Extra Hours (+{selectedHours - selectedPackage.package_hours}h)
                   </Text>
-                  <Text style={styles.calculationValue}>
+                  <Text style={styles.priceValue}>
                     ₹{(selectedHours - selectedPackage.package_hours) * parseFloat(selectedPackage.extra_hr_rate)}
                   </Text>
                 </View>
               )}
-              <View style={styles.calculationDivider} />
-              <View style={styles.calculationRow}>
-                <Text style={styles.calculatedKmText}>Estimated Distance: {calculatedKm} km</Text>
-              </View>
-              <View style={styles.calculationRow}>
-                <Text style={styles.totalPriceText}>Total: ₹{totalPrice}</Text>
+              {selectedKm > selectedPackage.package_km && (
+                <View style={styles.priceRow}>
+                  <Text style={styles.priceLabel}>
+                    Extra KM (+{selectedKm - selectedPackage.package_km}km)
+                  </Text>
+                  <Text style={styles.priceValue}>
+                    ₹{(selectedKm - selectedPackage.package_km) * parseFloat(selectedPackage.extra_km_rate)}
+                  </Text>
+                </View>
+              )}
+              <View style={styles.totalRow}>
+                <Text style={styles.totalLabel}>Total Amount</Text>
+                <Text style={styles.totalValue}>₹{totalPrice}</Text>
               </View>
             </View>
           </View>
@@ -536,7 +635,7 @@ export default function HourlyConfirmationScreen() {
           <View style={styles.fareContainer}>
             <Text style={styles.fareAmount}>₹{totalPrice}</Text>
             <Text style={styles.fareNote}>
-              Price is inclusive of GST and exclusive of toll.
+              Price is inclusive of GST and exclusive of toll and permit.
             </Text>
           </View>
         </View>
@@ -688,79 +787,105 @@ const styles = StyleSheet.create({
     fontWeight: '700',
     color: '#10B981',
   },
-  hourSelectionContainer: {
-    backgroundColor: '#F9FAFB',
-    borderRadius: 12,
-    padding: 16,
-  },
-  hourAdjuster: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    marginVertical: 16,
-  },
-  hourButton: {
-    width: 40,
-    height: 40,
-    borderRadius: 20,
+  configurationCard: {
     backgroundColor: '#ffffff',
-    justifyContent: 'center',
-    alignItems: 'center',
-    borderWidth: 2,
-    borderColor: '#10B981',
+    borderRadius: 16,
+    padding: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  disabledHourButton: {
-    borderColor: '#D1D5DB',
-    backgroundColor: '#F3F4F6',
-  },
-  hourDisplay: {
-    alignItems: 'center',
-    marginHorizontal: 24,
-  },
-  hourText: {
-    fontSize: 18,
-    fontWeight: '600',
-    color: '#1F2937',
-  },
-  minHourText: {
-    fontSize: 12,
-    color: '#6B7280',
-    marginTop: 2,
-  },
-  calculationDetails: {
-    marginTop: 16,
-    paddingTop: 16,
-    borderTopWidth: 1,
-    borderTopColor: '#E5E7EB',
-  },
-  calculationRow: {
+  configRow: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: 8,
+    paddingVertical: 12,
   },
-  calculationLabel: {
-    fontSize: 14,
-    color: '#6B7280',
-    flex: 1,
+  configLabel: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 8,
   },
-  calculationValue: {
-    fontSize: 14,
+  configLabelText: {
+    fontSize: 16,
     fontWeight: '600',
-    color: '#374151',
+    color: '#1F2937',
   },
-  calculationDivider: {
+  adjustmentControl: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+    backgroundColor: '#F9FAFB',
+    padding: 8,
+    borderRadius: 12,
+  },
+  adjustButton: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#ffffff',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 1,
+    borderColor: '#E5E7EB',
+  },
+  valueDisplay: {
+    alignItems: 'center',
+    minWidth: 80,
+  },
+  valueText: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  minValueText: {
+    fontSize: 11,
+    color: '#6B7280',
+  },
+  divider: {
     height: 1,
     backgroundColor: '#E5E7EB',
-    marginVertical: 12,
+    marginVertical: 8,
   },
-  calculatedKmText: {
+  priceBreakdown: {
+    marginTop: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  priceRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 12,
+  },
+  priceLabel: {
     fontSize: 14,
-    color: '#374151',
-    fontWeight: '500',
+    color: '#6B7280',
   },
-  totalPriceText: {
-    fontSize: 18,
+  priceValue: {
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#1F2937',
+  },
+  totalRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    paddingTop: 12,
+    marginTop: 12,
+    borderTopWidth: 1,
+    borderTopColor: '#E5E7EB',
+  },
+  totalLabel: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1F2937',
+  },
+  totalValue: {
+    fontSize: 20,
     fontWeight: '700',
     color: '#10B981',
   },

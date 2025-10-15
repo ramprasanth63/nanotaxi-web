@@ -331,7 +331,7 @@ export default function ConfirmationScreen() {
               ₹{fare}
             </Text>
             <Text style={{ color: '#6B7280', fontSize: 14, marginTop: 6 }}>
-              Price is inclusive of GST and exclusive of toll.
+              Price is inclusive of GST and exclusive of toll and permit.
             </Text>
           </View>
         </View>
