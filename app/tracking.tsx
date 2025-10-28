@@ -2,7 +2,6 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useRef } from 'react';
 import {
-  Alert,
   Animated,
   Dimensions,
   SafeAreaView,
@@ -10,7 +9,7 @@ import {
   StyleSheet,
   Text,
   TouchableOpacity,
-  View,
+  View
 } from 'react-native';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
 
@@ -171,11 +170,7 @@ export default function BookingConfirmationScreen() {
   };
 
   const handleStayOnPage = () => {
-    Alert.alert(
-      'Staying Here',
-      'You can check My Rides anytime from the tab bar!',
-      [{ text: 'OK', style: 'default' }]
-    );
+    router.push('/(tabs)');
   };
 
   const rippleScale1 = rippleAnim1.interpolate({
@@ -325,7 +320,7 @@ export default function BookingConfirmationScreen() {
 
           {/* Secondary Action */}
           <TouchableOpacity style={styles.secondaryButton} onPress={handleStayOnPage}>
-            <Text style={styles.secondaryButtonText}>Stay on this page</Text>
+            <Text style={styles.secondaryButtonText}>Go to Home</Text>
           </TouchableOpacity>
         </View>
       </Animated.View>

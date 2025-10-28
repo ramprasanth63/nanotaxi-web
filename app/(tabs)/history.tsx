@@ -157,12 +157,12 @@ export default function HistoryScreen() {
             {booking.total_hours_booked} hrs
           </Text>
         </View>
-        <View style={styles.detailItem}>
+        {booking.no_of_nights > 0 && <View style={styles.detailItem}>
           <MaterialCommunityIcons name="moon-waning-crescent" size={16} color="#6B7280" />
           <Text style={styles.detailText}>
             {booking.no_of_nights} night(s)
           </Text>
-        </View>
+        </View>}
       </View>
 
       <View style={styles.tripDetails}>
@@ -194,6 +194,10 @@ export default function HistoryScreen() {
             <Text style={styles.costValue}>₹{booking.base_amount}</Text>
           </View>
         )}
+         <View style={styles.costItem}>
+            <Text style={styles.costLabel}>GST:</Text>
+            <Text style={styles.costValue}>₹100</Text>
+          </View>
         {booking.toll_amount > 0 && (
           <View style={styles.costItem}>
             <Text style={styles.costLabel}>Toll Charges:</Text>
@@ -210,6 +214,18 @@ export default function HistoryScreen() {
           <View style={styles.costItem}>
             <Text style={styles.costLabel}>Night Halt:</Text>
             <Text style={styles.costValue}>₹{booking.night_halt_charges}</Text>
+          </View>
+        )}
+        {booking.total_amount_for_extra_km > 0 && (
+          <View style={styles.costItem}>
+            <Text style={styles.costLabel}>Extra KM Charges:</Text>
+            <Text style={styles.costValue}>₹{booking.total_amount_for_extra_km}</Text>
+          </View>
+        )}
+        {booking.total_amount_for_extra_hr > 0 && (
+          <View style={styles.costItem}>
+            <Text style={styles.costLabel}>Extra HR Charges:</Text>
+            <Text style={styles.costValue}>₹{booking.total_amount_for_extra_hr}</Text>
           </View>
         )}
       </View>
@@ -296,7 +312,7 @@ export default function HistoryScreen() {
         </View>
         <View style={styles.detailItem}>
           <MaterialCommunityIcons name="currency-inr" size={16} color="#6B7280" />
-          <Text style={styles.detailText}>₹{booking.total_amount || booking.pending_payment}</Text>
+          <Text style={styles.detailText}>{booking.total_amount || booking.pending_payment}</Text>
         </View>
         {booking.pickup_time && (
           <View style={styles.detailItem}>
@@ -323,6 +339,70 @@ export default function HistoryScreen() {
           </Text>
         </View>
       )}
+
+       <View style={styles.packageCostBreakdown}>
+        {booking.base_fare > 0 && (
+          <View style={styles.costItem}>
+            <Text style={styles.costLabel}>Base Amount:</Text>
+            <Text style={styles.costValue}>₹{booking.base_fare}</Text>
+          </View>
+        )}
+         <View style={styles.costItem}>
+            <Text style={styles.costLabel}>GST:</Text>
+            <Text style={styles.costValue}>₹100</Text>
+          </View>
+        {booking.toll_charges.total > 0 && (
+          <View style={styles.costItem}>
+            <Text style={styles.costLabel}>Toll Charges:</Text>
+            <Text style={styles.costValue}>₹{booking.toll_charges.total}</Text>
+          </View>
+        )}
+        {booking.waiting_charges > 0 && (
+          <View style={styles.costItem}>
+            <Text style={styles.costLabel}>Waiting Charges:</Text>
+            <Text style={styles.costValue}>₹{booking.waiting_charges}</Text>
+          </View>
+        )}
+        {booking.parking_fee > 0 && (
+          <View style={styles.costItem}>
+            <Text style={styles.costLabel}>Parking Fee:</Text>
+            <Text style={styles.costValue}>₹{booking.parking_fee}</Text>
+          </View>
+        )}
+        {booking.night_halt_charges > 0 && (
+          <View style={styles.costItem}>
+            <Text style={styles.costLabel}>Night Halt:</Text>
+            <Text style={styles.costValue}>₹{booking.night_halt_charges}</Text>
+          </View>
+        )}
+        {booking.total_amount_for_extra_km > 0 && (
+          <View style={styles.costItem}>
+            <Text style={styles.costLabel}>Extra KM Charges:</Text>
+            <Text style={styles.costValue}>₹{booking.total_amount_for_extra_km}</Text>
+          </View>
+        )}
+        {booking.total_amount_for_extra_hr > 0 && (
+          <View style={styles.costItem}>
+            <Text style={styles.costLabel}>Extra HR Charges:</Text>
+            <Text style={styles.costValue}>₹{booking.total_amount_for_extra_hr}</Text>
+          </View>
+        )}
+      </View>
+
+      <View style={styles.paymentSummary}>
+        <View style={styles.paymentItem}>
+          <Text style={styles.paymentLabel}>Amount Paid:</Text>
+          <Text style={[styles.paymentAmount, { color: '#10B981' }]}>
+            ₹{booking.advanced_payment || 0}
+          </Text>
+        </View>
+        <View style={styles.paymentItem}>
+          <Text style={styles.paymentLabel}>Final Amount:</Text>
+          <Text style={[styles.paymentAmount, { color: '#374151', fontWeight: '600' }]}>
+            ₹{booking.pending_payment || booking.total_amount || 0}
+          </Text>
+        </View>
+      </View>
 
       {booking.rating ? (
         <View style={styles.ratingContainer}>
@@ -465,6 +545,17 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#ffffff',
+  },
+    orderDetailItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginRight: 16,
+    marginBottom: 8,
+  },
+   orderDetailText: {
+    fontSize: 13,
+    color: '#374151',
+    marginLeft: 4,
   },
   header: {
     paddingHorizontal: 24,

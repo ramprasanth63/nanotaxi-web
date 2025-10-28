@@ -379,7 +379,6 @@ export default function HourlyConfirmationScreen() {
         total_km_booked: selectedKm,
         toll_amount: 0,
         parking_fee: 0,
-        no_of_nights: 1,
         night_halt_charges: 0,
         base_amount: totalPrice - gstAmount,
         total_amount: totalPrice,
@@ -393,12 +392,13 @@ export default function HourlyConfirmationScreen() {
       const response = await apiPost('/api/book_package/', payload);
 
       if (response.status === 201) {
-        Alert.alert('Success', 'Package booked successfully!', [
-          {
-            text: 'OK',
-            onPress: () => router.push('/tracking')
-          }
-        ]);
+        // Alert.alert('Success', 'Package booked successfully!', [
+        //   {
+        //     text: 'OK',
+        //     onPress: () => router.push('/tracking')
+        //   }
+        // ]);
+        router.push('/tracking')
       } else {
         Alert.alert('Error', 'Failed to book package. Please try again.');
       }
@@ -611,6 +611,7 @@ export default function HourlyConfirmationScreen() {
               value={pickupAddress}
               onChangeText={setPickupAddress}
               placeholder="Enter detailed pickup address"
+              placeholderTextColor="#888"
               multiline
             />
           </View>
@@ -623,6 +624,7 @@ export default function HourlyConfirmationScreen() {
               value={specialInstructions}
               onChangeText={setSpecialInstructions}
               placeholder="Special instructions (optional)"
+              placeholderTextColor="#888"
               multiline
               numberOfLines={3}
             />

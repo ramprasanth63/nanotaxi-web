@@ -891,6 +891,12 @@ export default function BookingsScreen() {
             </Text>
           </View>
         )}
+          <View style={styles.orderDetailItem}>
+            <MaterialCommunityIcons name="cash" size={16} color="#6B7280" />
+            <Text style={styles.orderDetailText}>
+              GST: ₹100
+            </Text>
+          </View>
         {booking.toll_amount !== "" && booking.toll_amount > 0 && (
           <View style={styles.orderDetailItem}>
             <MaterialCommunityIcons name="currency-inr" size={16} color="#6B7280" />
@@ -912,6 +918,22 @@ export default function BookingsScreen() {
             <MaterialCommunityIcons name="weather-night" size={16} color="#6B7280" />
             <Text style={styles.orderDetailText}>
               Night Halt: ₹{booking.night_halt_charges}
+            </Text>
+          </View>
+        )}
+        {booking.total_amount_for_extra_km !== "" && booking.total_amount_for_extra_km > 0 && (
+          <View style={styles.orderDetailItem}>
+            <MaterialCommunityIcons name="weather-night" size={16} color="#6B7280" />
+            <Text style={styles.orderDetailText}>
+              Extra KM Charges: ₹{booking.total_amount_for_extra_km}
+            </Text>
+          </View>
+        )}
+         {booking.total_amount_for_extra_hr !== "" && booking.total_amount_for_extra_hr > 0 && (
+          <View style={styles.orderDetailItem}>
+            <MaterialCommunityIcons name="weather-night" size={16} color="#6B7280" />
+            <Text style={styles.orderDetailText}>
+              Extra HR Charges: ₹{booking.total_amount_for_extra_hr} 
             </Text>
           </View>
         )}
@@ -1131,6 +1153,56 @@ export default function BookingsScreen() {
             </View>
           )}
         </View>
+
+           <View style={styles.packageCostDetails}>
+        {booking.base_fare !== "" && booking.base_fare > 0 && (
+          <View style={styles.orderDetailItem}>
+            <MaterialCommunityIcons name="cash" size={16} color="#6B7280" />
+            <Text style={styles.orderDetailText}>
+              Base: ₹{booking.base_fare}
+            </Text>
+          </View>
+        )}
+          <View style={styles.orderDetailItem}>
+            <MaterialCommunityIcons name="cash" size={16} color="#6B7280" />
+            <Text style={styles.orderDetailText}>
+              GST: ₹100
+            </Text>
+          </View>
+        {booking.toll_charges.total !== "" && booking.toll_charges.total > 0 && (
+          <View style={styles.orderDetailItem}>
+            <MaterialCommunityIcons name="currency-inr" size={16} color="#6B7280" />
+            <Text style={styles.orderDetailText}>
+              Toll: ₹{booking.toll_charges.total}
+            </Text>
+          </View>
+        )}
+        {booking.parking_fee !== "" && booking.parking_fee > 0 && (
+          <View style={styles.orderDetailItem}>
+            <MaterialCommunityIcons name="parking" size={16} color="#6B7280" />
+            <Text style={styles.orderDetailText}>
+              Parking: ₹{booking.parking_fee}
+            </Text>
+          </View>
+        )}
+        {booking.night_halt_charges !== "" && booking.night_halt_charges > 0 && (
+          <View style={styles.orderDetailItem}>
+            <MaterialCommunityIcons name="weather-night" size={16} color="#6B7280" />
+            <Text style={styles.orderDetailText}>
+              Night Halt: ₹{booking.night_halt_charges}
+            </Text>
+          </View>
+        )}
+       
+         {booking.waiting_charges !== "" && booking.waiting_charges > 0 && (
+          <View style={styles.orderDetailItem}>
+            <MaterialCommunityIcons name="weather-night" size={16} color="#6B7280" />
+            <Text style={styles.orderDetailText}>
+              Waiting Charges: ₹{booking.waiting_charges}
+            </Text>
+          </View>
+        )}
+      </View>
 
         <View style={styles.bookingActions}>
           {booking.status === 'Started' && (

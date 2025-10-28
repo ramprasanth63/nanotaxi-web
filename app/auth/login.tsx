@@ -1,13 +1,18 @@
 import { useAuth } from '@/contexts/AuthContext';
 import { apiPost } from '@/services/apiClient';
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import * as SecureStore from 'expo-secure-store';
 import React, { useEffect, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
+  Animated,
   KeyboardAvoidingView,
   Platform,
+  ScrollView,
+  StatusBar,
   StyleSheet,
   Text,
   TextInput,
@@ -28,9 +33,28 @@ export default function LoginScreen() {
   const [tempKey, setTempKey] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [loading, setLoading] = useState(false);
+  const [fadeAnim] = useState(new Animated.Value(0));
+  const [slideAnim] = useState(new Animated.Value(50));
   const { login } = useAuth();
   const router = useRouter();
+
+  useEffect(() => {
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+    ]).start();
+  }, []);
 
   useEffect(() => {
     let timer: ReturnType<typeof setTimeout>;
@@ -85,7 +109,6 @@ export default function LoginScreen() {
       if (response.data.status === 'success' && response.data.temp_key) {
         setOtpVerified(true);
         setTempKey(response.data.temp_key);
-        // Alert.alert('Success', 'OTP verified successfully.');
       } else {
         setOtpVerified(false);
         setTempKey('');
@@ -156,7 +179,6 @@ export default function LoginScreen() {
       }
       setLoading(true);
       try {
-        //if mobile not start with +91 add +91
         const contact = authMethod === 'email' ? email : (mobile.startsWith('+91') ? mobile : `+91${mobile}`);
         const success = await login(contact, password);
         if (success) {
@@ -173,296 +195,552 @@ export default function LoginScreen() {
   };
 
   return (
-    <KeyboardAvoidingView
-      style={styles.container}
-      behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
-    >
-      <View style={styles.content}>
-        <Text style={styles.title}>NANO Taxi</Text>
-        <Text style={styles.subtitle}>
-          {isSignup ? 'Create your account' : 'Welcome back!'}
-        </Text>
-        <View style={styles.form}>
-          {/* Select Email or Mobile */}
-          <View style={{ flexDirection: 'row', justifyContent: 'center', marginBottom: 8 }}>
-            <TouchableOpacity
-              style={{
-                backgroundColor: authMethod === 'email' ? '#10B981' : '#F3F4F6',
-                padding: 8,
-                borderRadius: 8,
-                marginRight: 8,
-              }}
-              onPress={() => setAuthMethod('email')}
-            >
-              <Text style={{ color: authMethod === 'email' ? '#fff' : '#10B981', fontWeight: 'bold' }}>Email</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={{
-                backgroundColor: authMethod === 'mobile' ? '#10B981' : '#F3F4F6',
-                padding: 8,
-                borderRadius: 8,
-              }}
-              onPress={() => setAuthMethod('mobile')}
-            >
-              <Text style={{ color: authMethod === 'mobile' ? '#fff' : '#10B981', fontWeight: 'bold' }}>Mobile</Text>
-            </TouchableOpacity>
+    <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor="#059669" />
+      <LinearGradient
+        colors={['#059669', '#10B981', '#34D399']}
+        style={styles.gradientHeader}
+      >
+        <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
+          <View style={styles.logoContainer}>
+            <Ionicons name="car-sport" size={48} color="#ffffff" />
           </View>
-          {/* Email or Mobile Input */}
-          {authMethod === 'email' ? (
-            <TextInput
-              style={styles.input}
-              placeholder="Email"
-              value={email}
-              onChangeText={setEmail}
-              keyboardType="email-address"
-              autoCapitalize="none"
-            />
-          ) : (
-            <View style={{ flexDirection: 'row', alignItems: 'center', width: '100%' }}>
-              <View style={{
-                minWidth: 54,
-                paddingHorizontal: 8,
-                paddingVertical: 16,
-                backgroundColor: '#F3F4F6',
-                borderTopLeftRadius: 12,
-                borderBottomLeftRadius: 12,
-                borderWidth: 1,
-                borderColor: '#D1D5DB',
-                borderRightWidth: 0,
-                alignItems: 'center',
-                justifyContent: 'center',
-              }}>
-                <Text style={{ fontSize: 16, color: '#374151' }}>+91</Text>
-              </View>
-              <TextInput
-                style={[styles.input, {
-                  flex: 1,
-                  borderTopLeftRadius: 0,
-                  borderBottomLeftRadius: 0,
-                  borderLeftWidth: 0,
-                  width: '100%',
-                  paddingLeft: 12,
-                }]}
-                placeholder="Mobile Number"
-                value={mobile}
-                onChangeText={setMobile}
-                keyboardType="phone-pad"
-                autoCapitalize="none"
-                maxLength={10}
-              />
+          <Text style={styles.title}>NANO Taxi</Text>
+          <Text style={styles.headerSubtitle}>Your ride, simplified</Text>
+        </Animated.View>
+      </LinearGradient>
+
+      <KeyboardAvoidingView
+        style={styles.formContainer}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView 
+          showsVerticalScrollIndicator={false}
+          contentContainerStyle={styles.scrollContent}
+        >
+          <Animated.View style={[styles.card, { opacity: fadeAnim }]}>
+            <View style={styles.cardHeader}>
+              <Text style={styles.cardTitle}>
+                {isSignup ? 'Create Account' : 'Welcome Back'}
+              </Text>
+              <Text style={styles.cardSubtitle}>
+                {isSignup ? 'Sign up to get started' : 'Login to continue'}
+              </Text>
             </View>
-          )}
-          {/* Signup: Send OTP and OTP field */}
-          {isSignup && !otpSent && (
-            <TouchableOpacity
-              style={[styles.authButton, { marginBottom: 0 }, loading && styles.disabledButton]}
-              onPress={handleSendOtp}
-              disabled={loading}
-            >
-              {loading ? (
-                <ActivityIndicator color="#ffffff" />
-              ) : (
-                <Text style={styles.authButtonText}>Send OTP</Text>
-              )}
-            </TouchableOpacity>
-          )}
-          {isSignup && otpSent && (
-            <>
-              <TextInput
-                style={styles.input}
-                placeholder="Enter OTP"
-                value={otp}
-                onChangeText={setOtp}
-                keyboardType="number-pad"
-                maxLength={6}
-                editable={!otpVerified}
-              />
-              <View style={{ flexDirection: 'row', gap: 8, marginTop: 8 }}>
+
+            <View style={styles.form}>
+              {/* Auth Method Selector */}
+              <View style={styles.methodSelector}>
                 <TouchableOpacity
-                  style={[styles.authButton, {
-                    flex: 1,
-                    backgroundColor: otpVerified ? '#22c55e' : '#fde047',
-                    borderColor: otpVerified ? '#22c55e' : '#fde047',
-                    borderWidth: 1,
-                    marginTop: 0,
-                  }, loading && styles.disabledButton]}
-                  onPress={otpVerified ? undefined : handleVerifyOtp}
-                  disabled={otpVerified || loading}
+                  style={[
+                    styles.methodButton,
+                    authMethod === 'email' && styles.methodButtonActive,
+                  ]}
+                  onPress={() => setAuthMethod('email')}
+                  activeOpacity={0.7}
                 >
-                  {loading ? (
-                    <ActivityIndicator color={otpVerified ? "#ffffff" : "#374151"} />
-                  ) : (
-                    <Text style={[styles.authButtonText, { color: otpVerified ? '#fff' : '#374151' }]}>
-                      {otpVerified ? 'Verified ✓' : 'Verify OTP'}
-                    </Text>
-                  )}
+                  <Ionicons
+                    name="mail"
+                    size={20}
+                    color={authMethod === 'email' ? '#ffffff' : '#10B981'}
+                  />
+                  <Text
+                    style={[
+                      styles.methodButtonText,
+                      authMethod === 'email' && styles.methodButtonTextActive,
+                    ]}
+                  >
+                    Email
+                  </Text>
                 </TouchableOpacity>
+                
                 <TouchableOpacity
-                  style={[styles.authButton, {
-                    flex: 1,
-                    backgroundColor: canResend ? '#10B981' : '#9CA3AF',
-                    marginTop: 0,
-                  }, loading && styles.disabledButton]}
-                  onPress={canResend ? handleSendOtp : undefined}
-                  disabled={!canResend || otpVerified || loading}
+                  style={[
+                    styles.methodButton,
+                    authMethod === 'mobile' && styles.methodButtonActive,
+                  ]}
+                  onPress={() => setAuthMethod('mobile')}
+                  activeOpacity={0.7}
+                >
+                  <Ionicons
+                    name="phone-portrait"
+                    size={20}
+                    color={authMethod === 'mobile' ? '#ffffff' : '#10B981'}
+                  />
+                  <Text
+                    style={[
+                      styles.methodButtonText,
+                      authMethod === 'mobile' && styles.methodButtonTextActive,
+                    ]}
+                  >
+                    Mobile
+                  </Text>
+                </TouchableOpacity>
+              </View>
+
+              {/* Email or Mobile Input */}
+              {authMethod === 'email' ? (
+                <View style={styles.inputContainer}>
+                  <Ionicons name="mail-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                  <TextInput
+                    style={styles.input}
+                    placeholder="Enter your email"
+                    placeholderTextColor="#9CA3AF"
+                    value={email}
+                    onChangeText={setEmail}
+                    keyboardType="email-address"
+                    autoCapitalize="none"
+                  />
+                </View>
+              ) : (
+                <View style={styles.inputContainer}>
+                  <View style={styles.countryCode}>
+                    <Text style={styles.countryCodeText}>🇮🇳 +91</Text>
+                  </View>
+                  <TextInput
+                    style={[styles.input, styles.mobileInput]}
+                    placeholder="Enter mobile number"
+                    placeholderTextColor="#9CA3AF"
+                    value={mobile}
+                    onChangeText={setMobile}
+                    keyboardType="phone-pad"
+                    autoCapitalize="none"
+                    maxLength={10}
+                  />
+                </View>
+              )}
+
+              {/* Signup: Send OTP */}
+              {isSignup && !otpSent && (
+                <TouchableOpacity
+                  style={[styles.primaryButton, loading && styles.disabledButton]}
+                  onPress={handleSendOtp}
+                  disabled={loading}
+                  activeOpacity={0.8}
                 >
                   {loading ? (
                     <ActivityIndicator color="#ffffff" />
                   ) : (
-                    <Text style={styles.authButtonText}>
-                      {canResend ? 'Resend OTP' : `Resend OTP (${resendTimer}s)`}
-                    </Text>
+                    <>
+                      <Text style={styles.primaryButtonText}>Send OTP</Text>
+                      <Ionicons name="arrow-forward" size={20} color="#ffffff" />
+                    </>
                   )}
                 </TouchableOpacity>
-              </View>
-              {/* Password fields only after OTP verified */}
-              {otpVerified && (
+              )}
+
+              {/* OTP Input and Verification */}
+              {isSignup && otpSent && (
                 <>
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Password"
-                    value={password}
-                    onChangeText={setPassword}
-                    secureTextEntry
-                  />
-                  <TextInput
-                    style={styles.input}
-                    placeholder="Confirm Password"
-                    value={confirmPassword}
-                    onChangeText={setConfirmPassword}
-                    secureTextEntry
-                  />
+                  <View style={styles.inputContainer}>
+                    <Ionicons name="key-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter 6-digit OTP"
+                      value={otp}
+                      onChangeText={setOtp}
+                      keyboardType="number-pad"
+                      maxLength={6}
+                      editable={!otpVerified}
+                      placeholderTextColor="#9CA3AF"
+                    />
+                    {otpVerified && (
+                      <Ionicons name="checkmark-circle" size={24} color="#10B981" style={styles.verifiedIcon} />
+                    )}
+                  </View>
+
+                  <View style={styles.otpButtonContainer}>
+                    <TouchableOpacity
+                      style={[
+                        styles.secondaryButton,
+                        { flex: 1 },
+                        otpVerified && styles.verifiedButton,
+                        loading && styles.disabledButton,
+                      ]}
+                      onPress={otpVerified ? undefined : handleVerifyOtp}
+                      disabled={otpVerified || loading}
+                      activeOpacity={0.8}
+                    >
+                      {loading ? (
+                        <ActivityIndicator color={otpVerified ? "#ffffff" : "#10B981"} />
+                      ) : (
+                        <Text style={[styles.secondaryButtonText, otpVerified && styles.verifiedButtonText]}>
+                          {otpVerified ? '✓ Verified' : 'Verify'}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+
+                    <TouchableOpacity
+                      style={[
+                        styles.secondaryButton,
+                        { flex: 1 },
+                        !canResend && styles.disabledButton,
+                        loading && styles.disabledButton,
+                      ]}
+                      onPress={canResend ? handleSendOtp : undefined}
+                      disabled={!canResend || otpVerified || loading}
+                      activeOpacity={0.8}
+                    >
+                      {loading ? (
+                        <ActivityIndicator color="#10B981" />
+                      ) : (
+                        <Text style={styles.secondaryButtonText}>
+                          {canResend ? 'Resend' : `${resendTimer}s`}
+                        </Text>
+                      )}
+                    </TouchableOpacity>
+                  </View>
+
+                  {/* Password fields after OTP verification */}
+                  {otpVerified && (
+                    <>
+                      <View style={styles.inputContainer}>
+                        <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Create password"
+                          value={password}
+                          onChangeText={setPassword}
+                          secureTextEntry={!showPassword}
+                          placeholderTextColor="#9CA3AF"
+                        />
+                        <TouchableOpacity
+                          onPress={() => setShowPassword(!showPassword)}
+                          style={styles.eyeIcon}
+                        >
+                          <Ionicons
+                            name={showPassword ? "eye-outline" : "eye-off-outline"}
+                            size={22}
+                            color="#9CA3AF"
+                          />
+                        </TouchableOpacity>
+                      </View>
+
+                      <View style={styles.inputContainer}>
+                        <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                        <TextInput
+                          style={styles.input}
+                          placeholder="Confirm password"
+                          value={confirmPassword}
+                          onChangeText={setConfirmPassword}
+                          secureTextEntry={!showConfirmPassword}
+                          placeholderTextColor="#9CA3AF"
+                        />
+                        <TouchableOpacity
+                          onPress={() => setShowConfirmPassword(!showConfirmPassword)}
+                          style={styles.eyeIcon}
+                        >
+                          <Ionicons
+                            name={showConfirmPassword ? "eye-outline" : "eye-off-outline"}
+                            size={22}
+                            color="#9CA3AF"
+                          />
+                        </TouchableOpacity>
+                      </View>
+
+                      <TouchableOpacity
+                        style={[
+                          styles.primaryButton,
+                          loading && styles.disabledButton,
+                          (!password || !confirmPassword || password !== confirmPassword) && styles.disabledButton,
+                        ]}
+                        onPress={handleSetPassword}
+                        disabled={loading || !password || !confirmPassword || password !== confirmPassword}
+                        activeOpacity={0.8}
+                      >
+                        {loading ? (
+                          <ActivityIndicator color="#ffffff" />
+                        ) : (
+                          <>
+                            <Text style={styles.primaryButtonText}>Create Account</Text>
+                            <Ionicons name="checkmark" size={20} color="#ffffff" />
+                          </>
+                        )}
+                      </TouchableOpacity>
+                    </>
+                  )}
+                </>
+              )}
+
+              {/* Login Password Field */}
+              {!isSignup && (
+                <>
+                  <View style={styles.inputContainer}>
+                    <Ionicons name="lock-closed-outline" size={20} color="#9CA3AF" style={styles.inputIcon} />
+                    <TextInput
+                      style={styles.input}
+                      placeholder="Enter your password"
+                      value={password}
+                      onChangeText={setPassword}
+                      secureTextEntry={!showPassword}
+                      placeholderTextColor="#9CA3AF"
+                    />
+                    <TouchableOpacity
+                      onPress={() => setShowPassword(!showPassword)}
+                      style={styles.eyeIcon}
+                    >
+                      <Ionicons
+                        name={showPassword ? "eye-outline" : "eye-off-outline"}
+                        size={22}
+                        color="#9CA3AF"
+                      />
+                    </TouchableOpacity>
+                  </View>
+
                   <TouchableOpacity
-                    style={[styles.authButton, { backgroundColor: '#22c55e', marginTop: 8 }, loading && styles.disabledButton]}
-                    onPress={handleSetPassword}
-                    disabled={loading || !password || !confirmPassword || password !== confirmPassword}
+                    style={[styles.primaryButton, loading && styles.disabledButton]}
+                    onPress={handleAuth}
+                    disabled={loading}
+                    activeOpacity={0.8}
                   >
                     {loading ? (
                       <ActivityIndicator color="#ffffff" />
                     ) : (
-                      <Text style={styles.authButtonText}>Set Password</Text>
+                      <>
+                        <Text style={styles.primaryButtonText}>Login</Text>
+                        <Ionicons name="arrow-forward" size={20} color="#ffffff" />
+                      </>
                     )}
                   </TouchableOpacity>
                 </>
               )}
-            </>
-          )}
-          {/* Password fields for login only */}
-          {!isSignup && (
-            <>
-              <TextInput
-                style={styles.input}
-                placeholder="Password"
-                value={password}
-                onChangeText={setPassword}
-                secureTextEntry
-              />
+
+              {/* Switch between Login/Signup */}
               <TouchableOpacity
-                style={[styles.authButton, loading && styles.disabledButton]}
-                onPress={handleAuth}
-                disabled={loading}
+                style={styles.switchButton}
+                onPress={() => {
+                  setIsSignup(!isSignup);
+                  setOtpSent(false);
+                  setOtp('');
+                  setOtpVerified(false);
+                  setTempKey('');
+                  setPassword('');
+                  setConfirmPassword('');
+                  setShowPassword(false);
+                  setShowConfirmPassword(false);
+                }}
+                activeOpacity={0.7}
               >
-                {loading ? (
-                  <ActivityIndicator color="#ffffff" />
-                ) : (
-                  <Text style={styles.authButtonText}>Login</Text>
-                )}
+                <Text style={styles.switchButtonText}>
+                  {isSignup ? 'Already have an account? ' : "Don't have an account? "}
+                  <Text style={styles.switchButtonTextBold}>
+                    {isSignup ? 'Login' : 'Sign Up'}
+                  </Text>
+                </Text>
               </TouchableOpacity>
-            </>
-          )}
-          <TouchableOpacity
-            style={styles.switchButton}
-            onPress={() => {
-              setIsSignup(!isSignup);
-              setOtpSent(false);
-              setOtp('');
-              setOtpVerified(false);
-              setTempKey('');
-              setPassword('');
-              setConfirmPassword('');
-            }}
-          >
-            <Text style={styles.switchButtonText}>
-              {isSignup
-                ? 'Already have an account? Login'
-                : "Don't have an account? Sign Up"}
-            </Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.skipButton}
-            onPress={() => router.replace('/(tabs)')}
-          >
-            {/* <Text style={styles.skipButtonText}>Skip & Continue as Guest</Text> */}
-          </TouchableOpacity>
-        </View>
-      </View>
-    </KeyboardAvoidingView>
+            </View>
+          </Animated.View>
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#F9FAFB',
   },
-  content: {
-    flex: 1,
-    justifyContent: 'center',
+  gradientHeader: {
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 40,
     paddingHorizontal: 24,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 5,
+  },
+  logoContainer: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: 'rgba(255, 255, 255, 0.2)',
+    alignItems: 'center',
+    justifyContent: 'center',
+    alignSelf: 'center',
+    marginBottom: 16,
   },
   title: {
-    fontSize: 32,
+    fontSize: 36,
     fontWeight: 'bold',
-    color: '#10B981',
+    color: '#ffffff',
     textAlign: 'center',
-    marginBottom: 8,
+    letterSpacing: 1,
   },
-  subtitle: {
+  headerSubtitle: {
     fontSize: 16,
-    color: '#6B7280',
+    color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
-    marginBottom: 48,
+    marginTop: 4,
+  },
+  formContainer: {
+    flex: 1,
+    marginTop: -20,
+  },
+  scrollContent: {
+    flexGrow: 1,
+    paddingBottom: 24,
+  },
+  card: {
+    backgroundColor: '#ffffff',
+    borderRadius: 24,
+    marginHorizontal: 20,
+    padding: 24,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08,
+    shadowRadius: 16,
+    elevation: 4,
+  },
+  cardHeader: {
+    marginBottom: 24,
+  },
+  cardTitle: {
+    fontSize: 24,
+    fontWeight: 'bold',
+    color: '#111827',
+    marginBottom: 4,
+  },
+  cardSubtitle: {
+    fontSize: 14,
+    color: '#6B7280',
   },
   form: {
     gap: 16,
   },
-  input: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
+  methodSelector: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 8,
+  },
+  methodButton: {
+    flex: 1,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
     borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
     backgroundColor: '#F9FAFB',
   },
-  authButton: {
+  methodButtonActive: {
+    backgroundColor: '#10B981',
+    borderColor: '#10B981',
+  },
+  methodButtonText: {
+    fontSize: 15,
+    fontWeight: '600',
+    color: '#10B981',
+  },
+  methodButtonTextActive: {
+    color: '#ffffff',
+  },
+  inputContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    borderWidth: 1.5,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 16,
+    height: 56,
+  },
+  inputIcon: {
+    marginRight: 12,
+  },
+  input: {
+    flex: 1,
+    fontSize: 16,
+    color: '#111827',
+  },
+  mobileInput: {
+    paddingLeft: 0,
+  },
+  countryCode: {
+    paddingRight: 12,
+    borderRightWidth: 1,
+    borderRightColor: '#E5E7EB',
+    marginRight: 12,
+  },
+  countryCodeText: {
+    fontSize: 16,
+    color: '#374151',
+    fontWeight: '600',
+  },
+  eyeIcon: {
+    padding: 4,
+  },
+  verifiedIcon: {
+    marginLeft: 8,
+  },
+  primaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
     backgroundColor: '#10B981',
     borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    marginTop: 8,
+    paddingVertical: 16,
+    shadowColor: '#10B981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
-  authButtonText: {
+  primaryButtonText: {
     color: '#ffffff',
     fontSize: 16,
     fontWeight: '600',
   },
+  secondaryButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: 8,
+    backgroundColor: '#ffffff',
+    borderWidth: 1.5,
+    borderColor: '#10B981',
+    borderRadius: 12,
+    paddingVertical: 14,
+  },
+  secondaryButtonText: {
+    color: '#10B981',
+    fontSize: 15,
+    fontWeight: '600',
+  },
+  verifiedButton: {
+    backgroundColor: '#10B981',
+    borderColor: '#10B981',
+  },
+  verifiedButtonText: {
+    color: '#ffffff',
+  },
   disabledButton: {
-    backgroundColor: '#9CA3AF',
+    backgroundColor: '#D1D5DB',
+    borderColor: '#D1D5DB',
+    shadowOpacity: 0,
+  },
+  otpButtonContainer: {
+    flexDirection: 'row',
+    gap: 12,
   },
   switchButton: {
     alignItems: 'center',
-    marginTop: 16,
+    paddingVertical: 12,
+    marginTop: 8,
   },
   switchButtonText: {
-    color: '#3B82F6',
     fontSize: 14,
-  },
-  skipButton: {
-    alignItems: 'center',
-    marginTop: 24,
-  },
-  skipButtonText: {
     color: '#6B7280',
-    fontSize: 14,
+  },
+  switchButtonTextBold: {
+    fontWeight: '600',
+    color: '#10B981',
   },
 });

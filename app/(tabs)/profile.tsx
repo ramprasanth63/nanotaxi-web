@@ -1,45 +1,136 @@
 import { useAuth } from '@/contexts/AuthContext';
-import { apiPost } from '@/services/apiClient';
+import { apiGet, apiPut } from '@/services/apiClient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
 import {
   Alert,
   Linking,
+  Modal,
   ScrollView,
   StyleSheet,
   Text,
+  TextInput,
   TouchableOpacity,
   View,
 } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityIcons';
+
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, isLoggedIn, logout } = useAuth();
   const [showSupport, setShowSupport] = useState(false);
   const [supportMessage, setSupportMessage] = useState('');
-
-
+  const [showEmailModal, setShowEmailModal] = useState(false);
+  const [showPhoneModal, setShowPhoneModal] = useState(false);
+  const [emailInput, setEmailInput] = useState('');
+  const [phoneInput, setPhoneInput] = useState('');
+  const [customerData, setCustomerData] = useState<any>(null);
+  const [isLoading, setIsLoading] = useState(false);
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const [isLoggingOut, setIsLoggingOut] = useState(false);
+  
   useEffect(() => {
- console.log("isLoggedIn", user);
+    if (isLoggedIn && user?.customer_id) {
+      fetchCustomerDetails();
+    }
   }, [user]);
+  
+  const fetchCustomerDetails = async () => {
+    try {
+      const response = await apiGet(`/api/get_customer/${user?.customer_id}/`);
+      if (response.status === 200) {
+        console.log("Customer details fetched:", response.data.customer);
+        setCustomerData(response.data.customer);
+      }
+    } catch (error) {
+      console.error('Error fetching customer details:', error);
+    }
+  };
+
+  const handleUpdateEmail = async () => {
+    if (!emailInput.trim()) {
+      Alert.alert('Error', 'Please enter a valid email address');
+      return;
+    }
+
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(emailInput)) {
+      Alert.alert('Error', 'Please enter a valid email format');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await apiPut(`/api/edit_customer/${user?.customer_id}/`, {
+        email: emailInput,
+      });
+
+      if (response.status === 200 || response.ok) {
+        await fetchCustomerDetails();
+        setShowEmailModal(false);
+        setEmailInput('');
+        Alert.alert('Success', 'Email updated successfully!');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update email. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleUpdatePhone = async () => {
+    if (!phoneInput.trim()) {
+      Alert.alert('Error', 'Please enter a valid phone number');
+      return;
+    }
+
+    let formattedPhone = phoneInput.trim();
+    if (!formattedPhone.startsWith('+91')) {
+      formattedPhone = '+91' + formattedPhone.replace(/^0+/, '');
+    }
+
+    if (formattedPhone.length !== 13) {
+      Alert.alert('Error', 'Please enter a valid 10-digit phone number');
+      return;
+    }
+
+    setIsLoading(true);
+    try {
+      const response = await apiPut(`/api/edit_customer/${user?.customer_id}/`, {
+        phone_number: formattedPhone,
+      });
+
+      if (response.status === 200 || response.ok) {
+        await fetchCustomerDetails();
+        setShowPhoneModal(false);
+        setPhoneInput('');
+        Alert.alert('Success', 'Phone number updated successfully!');
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to update phone number. Please try again.');
+    } finally {
+      setIsLoading(false);
+    }
+  };
 
   const handleLogout = () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        { text: 'Cancel', style: 'cancel' },
-        { 
-          text: 'Logout', 
-          onPress: async () => {
-            await logout();
-            router.replace('/(tabs)');
-          },
-          style: 'destructive' 
-        },
-      ]
-    );
+    // open custom logout modal
+    setShowLogoutModal(true);
+  };
+
+  const confirmLogout = async () => {
+    try {
+      setIsLoggingOut(true);
+      await logout();
+      setShowLogoutModal(false);
+      router.replace('/(tabs)');
+    } catch (err) {
+      console.error('Logout failed', err);
+      setShowLogoutModal(false);
+    } finally {
+      setIsLoggingOut(false);
+    }
   };
 
   const handleSupportCall = () => {
@@ -56,191 +147,157 @@ export default function ProfileScreen() {
     );
   };
 
-  const handleSupportMessage = async () => {
-    if (!supportMessage.trim()) {
-      Alert.alert('Error', 'Please enter a message');
-      return;
+  const getEmailValue = () => {
+    if (!isLoggedIn) return 'Not logged in';
+    
+    // Priority: email field > contact (if not phone)
+    if (customerData?.email) return customerData.email;
+    if (customerData?.contact && !customerData.contact.startsWith('+91')) {
+      return customerData.contact;
     }
+    return null;
+  };
 
-    try {
-      await apiPost('/api/support/messages', {
-        userId: user?.id,
-        message: supportMessage,
-        timestamp: new Date().toISOString(),
-      });
-      
-      Alert.alert(
-        'Message Sent',
-        'Your support message has been sent. We will get back to you soon!',
-        [{ text: 'OK', onPress: () => { setSupportMessage(''); setShowSupport(false); } }]
-      );
-    } catch (error) {
-      Alert.alert(
-        'Message Sent',
-        'Your support message has been received. We will get back to you soon!',
-        [{ text: 'OK', onPress: () => { setSupportMessage(''); setShowSupport(false); } }]
-      );
+  const getPhoneValue = () => {
+    if (!isLoggedIn) return 'Not logged in';
+    
+    // Priority: phone_number field > contact (if phone)
+    if (customerData?.phone_number) return customerData.phone_number;
+    if (customerData?.contact && customerData.contact.startsWith('+91')) {
+      return customerData.contact;
     }
+    return null;
   };
 
   const profileSections = [
     {
-      title: 'Account',
+      title: 'Account Information',
       items: [
-        // {
-        //   icon: <MaterialCommunityIcons name="account" size={20} color="#6B7280" />,
-        //   label: 'Personal Information',
-        //   value: isLoggedIn ? user?.username : 'Guest User',
-        //   onPress: () => {},
-        // },
         {
-          icon: <MaterialCommunityIcons name="email" size={20} color="#6B7280" />,
+          icon: <MaterialCommunityIcons name="email-outline" size={24} color="#1FC25B" />,
           label: 'Email',
-          value: isLoggedIn ? (user?.username.startsWith('+91')) ? 'Not provided' :user?.username : 'Not logged in',
-          // value: isLoggedIn ? (user?.email || 'Not provided') : 'Not logged in',
-          onPress: () => {},
+          value: getEmailValue(),
+          onPress: () => {
+            if (isLoggedIn) {
+              setEmailInput(getEmailValue() || '');
+              setShowEmailModal(true);
+            }
+          },
+          showAdd: isLoggedIn && !getEmailValue(),
         },
         {
-          icon: <MaterialCommunityIcons name="phone" size={20} color="#6B7280" />,
+          icon: <MaterialCommunityIcons name="phone-outline" size={24} color="#FACC14" />,
           label: 'Phone',
-          // if phone number starts with +91, format it
-          value: isLoggedIn ? (user?.username.startsWith('+91')) ? user?.username :'Not provided' : 'Not logged in',
-          onPress: () => {},
+          value: getPhoneValue(),
+          onPress: () => {
+            if (isLoggedIn) {
+              setPhoneInput(getPhoneValue()?.replace('+91', '') || '');
+              setShowPhoneModal(true);
+            }
+          },
+          showAdd: isLoggedIn && !getPhoneValue(),
         },
       ],
     },
     {
-      title: 'Support',
+      title: 'Support & Help',
       items: [
-        // {
-        //   icon: <MaterialCommunityIcons name="help-circle" size={20} color="#6B7280" />,
-        //   label: 'Help Center',
-        //   value: 'FAQs and guides',
-        //   onPress: () => Alert.alert('Help Center', 'Help center will be available soon!'),
-        // },
-        // {
-        //   icon: <MaterialCommunityIcons name="message-text" size={20} color="#6B7280" />,
-        //   label: 'Send Message',
-        //   value: 'Contact support',
-        //   onPress: () => Alert.alert('Message', 'Message will be available soon!'),
-        //   // onPress: () => setShowSupport(true),
-        // },
         {
-          icon: <MaterialCommunityIcons name="phone" size={20} color="#6B7280" />,
-          label: 'Call Support',
+          icon: <MaterialCommunityIcons name="headset" size={24} color="#1FC25B" />,
+          label: 'Customer Support',
           value: '+91 9840407707',
           onPress: handleSupportCall,
+          showAdd: false,
         },
       ],
     },
-    // {
-    //   title: 'App',
-    //   items: [
-    //     {
-    //       icon: <MaterialCommunityIcons name="star" size={20} color="#6B7280" />,
-    //       label: 'Rate App',
-    //       value: 'Rate us on app store',
-    //       onPress: () => Alert.alert('Rate App', 'Thank you for your feedback!'),
-    //     },
-    //     {
-    //       icon: <MaterialCommunityIcons name="cog" size={20} color="#6B7280" />,
-    //       label: 'Settings',
-    //       value: 'App preferences',
-    //       onPress: () => Alert.alert('Settings', 'Settings will be available soon!'),
-    //     },
-    //   ],
-    // },
   ];
 
   const renderProfileItem = (item: any, index: number) => (
     <TouchableOpacity
       key={index}
-      style={styles.profileItem}
+      style={[styles.profileItem, index === 0 && styles.profileItemFirst]}
       onPress={item.onPress}
+      activeOpacity={0.7}
     >
       <View style={styles.itemLeft}>
-        {item.icon}
+        <View style={styles.iconContainer}>
+          {item.icon}
+        </View>
         <View style={styles.itemText}>
           <Text style={styles.itemLabel}>{item.label}</Text>
-          <Text style={styles.itemValue}>{item.value}</Text>
+          {item.showAdd ? (
+            <View style={styles.addContainer}>
+              <MaterialCommunityIcons name="plus-circle" size={16} color="#1FC25B" />
+              <Text style={styles.addText}>Tap to add {item.label.toLowerCase()}</Text>
+            </View>
+          ) : (
+            <Text style={styles.itemValue} numberOfLines={1}>{item.value}</Text>
+          )}
         </View>
       </View>
-  <MaterialCommunityIcons name="chevron-right" size={20} color="#9CA3AF" />
+      <MaterialCommunityIcons name="chevron-right" size={24} color="#D1D5DB" />
     </TouchableOpacity>
   );
 
-  if (showSupport) {
-    return (
-      <SafeAreaView style={styles.container}>
-        <View style={styles.header}>
-          <TouchableOpacity onPress={() => setShowSupport(false)}>
-            <Text style={styles.backButton}>Cancel</Text>
-          </TouchableOpacity>
-          <Text style={styles.headerTitle}>Contact Support</Text>
-          <View style={{ width: 60 }} />
-        </View>
-
-        <View style={styles.supportContainer}>
-          <Text style={styles.supportTitle}>How can we help you?</Text>
-          <Text style={styles.supportSubtitle}>
-            Send us a message and our support team will get back to you soon.
-          </Text>
-
-          <Text
-            style={styles.messageInput}
-            onPress={() => {
-              Alert.prompt(
-                'Support Message',
-                'Enter your message:',
-                [
-                  { text: 'Cancel', style: 'cancel' },
-                  {
-                    text: 'Send',
-                    onPress: (text) => {
-                      if (text) {
-                        setSupportMessage(text);
-                        handleSupportMessage();
-                      }
-                    },
-                  },
-                ],
-                'plain-text',
-                supportMessage
-              );
-            }}
-          >
-            {supportMessage || 'Type your message here...'}
-          </Text>
-
-          <TouchableOpacity
-            style={styles.sendButton}
-            onPress={handleSupportMessage}
-          >
-            <Text style={styles.sendButtonText}>Send Message</Text>
-          </TouchableOpacity>
-
-          <View style={styles.contactInfo}>
-            <Text style={styles.contactTitle}>Or contact us directly:</Text>
-            <TouchableOpacity
-              style={styles.contactButton}
-              onPress={handleSupportCall}
-            >
-              <MaterialCommunityIcons name="phone" size={20} color="#10B981" />
-              <Text style={styles.contactButtonText}>+91 1800-123-4567</Text>
+  const renderModal = (
+    visible: boolean,
+    onClose: () => void,
+    title: string,
+    value: string,
+    onChangeText: (text: string) => void,
+    onSubmit: () => void,
+    placeholder: string,
+    keyboardType: any = 'default'
+  ) => (
+    <Modal
+      visible={visible}
+      transparent
+      animationType="slide"
+      onRequestClose={onClose}
+    >
+      <View style={styles.modalOverlay}>
+        <View style={styles.modalContent}>
+          <View style={styles.modalHeader}>
+            <Text style={styles.modalTitle}>{title}</Text>
+            <TouchableOpacity onPress={onClose} style={styles.closeButton}>
+              <MaterialCommunityIcons name="close" size={24} color="#6B7280" />
             </TouchableOpacity>
           </View>
+
+          <TextInput
+            style={styles.input}
+            value={value}
+            onChangeText={onChangeText}
+            placeholder={placeholder}
+            placeholderTextColor="#9CA3AF"
+            keyboardType={keyboardType}
+            autoCapitalize="none"
+            autoCorrect={false}
+          />
+
+          <TouchableOpacity
+            style={[styles.submitButton, isLoading && styles.submitButtonDisabled]}
+            onPress={onSubmit}
+            disabled={isLoading}
+            activeOpacity={0.8}
+          >
+            <Text style={styles.submitButtonText}>
+              {isLoading ? 'Updating...' : 'Submit'}
+            </Text>
+          </TouchableOpacity>
         </View>
-      </SafeAreaView>
-    );
-  }
+      </View>
+    </Modal>
+  );
 
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Profile</Text>
         {isLoggedIn && (
-          <TouchableOpacity onPress={handleLogout}>
-            <MaterialCommunityIcons name="logout" size={24} color="#EF4444" />
+          <TouchableOpacity onPress={handleLogout} style={styles.logoutIconButton}>
+            <MaterialCommunityIcons name="logout-variant" size={24} color="#EF4444" />
           </TouchableOpacity>
         )}
       </View>
@@ -248,20 +305,32 @@ export default function ProfileScreen() {
       <ScrollView style={styles.content} showsVerticalScrollIndicator={false}>
         <View style={styles.profileHeader}>
           <View style={styles.avatarContainer}>
-            <MaterialCommunityIcons name="account" size={32} color="#6B7280" />
+            <MaterialCommunityIcons name="account" size={48} color="#1FC25B" />
+            <View style={styles.avatarBadge}>
+              <MaterialCommunityIcons name="shield-check" size={16} color="#FACC14" />
+            </View>
           </View>
           <Text style={styles.userName}>
-            {isLoggedIn ? user?.username : 'Guest User'}
+            {isLoggedIn ? (customerData?.contact || user?.username || 'User') : 'Guest User'}
           </Text>
-          <Text style={styles.userEmail}>
-            {isLoggedIn ? user?.email : 'Not logged in'}
-          </Text>
+          <View style={styles.statusBadge}>
+            <MaterialCommunityIcons 
+              name={isLoggedIn ? "check-circle" : "account-off"} 
+              size={14} 
+              color={isLoggedIn ? "#1FC25B" : "#9CA3AF"} 
+            />
+            <Text style={[styles.statusText, isLoggedIn && styles.statusTextActive]}>
+              {isLoggedIn ? 'Active Account' : 'Not logged in'}
+            </Text>
+          </View>
           {!isLoggedIn && (
             <TouchableOpacity
               style={styles.loginButton}
               onPress={() => router.push('/auth/login')}
+              activeOpacity={0.8}
             >
-              <Text style={styles.loginButtonText}>Login</Text>
+              <MaterialCommunityIcons name="login" size={20} color="#FFFFFF" />
+              <Text style={styles.loginButtonText}>Login to Continue</Text>
             </TouchableOpacity>
           )}
         </View>
@@ -276,13 +345,88 @@ export default function ProfileScreen() {
         ))}
 
         <View style={styles.appInfo}>
+          <View style={styles.logoContainer}>
+            <MaterialCommunityIcons name="car" size={32} color="#1FC25B" />
+          </View>
           <Text style={styles.appTitle}>NANO Taxi</Text>
-          {/* <Text style={styles.appVersion}>Version 1.0.0</Text> */}
           <Text style={styles.appDescription}>
             Your reliable ride booking companion
           </Text>
+          <View style={styles.appBadges}>
+            <View style={styles.badge}>
+              <MaterialCommunityIcons name="shield-check" size={14} color="#1FC25B" />
+              <Text style={styles.badgeText}>Secure</Text>
+            </View>
+            <View style={styles.badge}>
+              <MaterialCommunityIcons name="clock-fast" size={14} color="#FACC14" />
+              <Text style={styles.badgeText}>Fast</Text>
+            </View>
+            <View style={styles.badge}>
+              <MaterialCommunityIcons name="star" size={14} color="#FACC14" />
+              <Text style={styles.badgeText}>Reliable</Text>
+            </View>
+          </View>
         </View>
       </ScrollView>
+
+      {renderModal(
+        showEmailModal,
+        () => setShowEmailModal(false),
+        'Update Email',
+        emailInput,
+        setEmailInput,
+        handleUpdateEmail,
+        'Enter your email address',
+        'email-address'
+      )}
+
+      {renderModal(
+        showPhoneModal,
+        () => setShowPhoneModal(false),
+        'Update Phone Number',
+        phoneInput,
+        setPhoneInput,
+        handleUpdatePhone,
+        'Enter 10-digit phone number',
+        'phone-pad'
+      )}
+
+      {/* Custom Logout Modal */}
+      <Modal
+        visible={showLogoutModal}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setShowLogoutModal(false)}
+      >
+        <View style={styles.logoutModalOverlay}>
+          <View style={styles.logoutModalContent}>
+            <Text style={styles.logoutModalTitle}>Confirm Logout</Text>
+            <Text style={styles.logoutModalText}>Are you sure you want to logout?</Text>
+
+            <View style={styles.logoutButtons}>
+              <TouchableOpacity
+                style={[styles.logoutCancelButton]}
+                onPress={() => setShowLogoutModal(false)}
+                disabled={isLoggingOut}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.logoutCancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+
+              <TouchableOpacity
+                style={[styles.logoutButton, isLoggingOut && { opacity: 0.6 }]}
+                onPress={confirmLogout}
+                disabled={isLoggingOut}
+                activeOpacity={0.8}
+              >
+                <Text style={styles.logoutButtonText}>
+                  {isLoggingOut ? 'Logging out...' : 'Logout'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </View>
+      </Modal>
     </SafeAreaView>
   );
 }
@@ -290,195 +434,353 @@ export default function ProfileScreen() {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#ffffff',
+    backgroundColor: '#F9FAFB',
   },
   header: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 16,
+    paddingVertical: 20,
+    backgroundColor: '#FFFFFF',
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#F3F4F6',
+    elevation: 2,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 3,
   },
   headerTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1F2937',
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#111827',
+    letterSpacing: -0.5,
   },
-  backButton: {
-    fontSize: 16,
-    color: '#3B82F6',
-    fontWeight: '500',
+  logoutButton: {
+    padding: 8,
   },
   content: {
     flex: 1,
   },
   profileHeader: {
     alignItems: 'center',
-    paddingVertical: 32,
+    paddingVertical: 40,
     paddingHorizontal: 24,
+    backgroundColor: '#FFFFFF',
+    marginBottom: 16,
   },
   avatarContainer: {
-    width: 80,
-    height: 80,
-    borderRadius: 40,
-    backgroundColor: '#F3F4F6',
+    width: 100,
+    height: 100,
+    borderRadius: 50,
+    backgroundColor: '#F0FDF4',
     justifyContent: 'center',
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 20,
+    borderWidth: 3,
+    borderColor: '#1FC25B',
+    position: 'relative',
+  },
+  avatarBadge: {
+    position: 'absolute',
+    bottom: 0,
+    right: 0,
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#FFFFFF',
+    justifyContent: 'center',
+    alignItems: 'center',
+    borderWidth: 3,
+    borderColor: '#F0FDF4',
   },
   userName: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 4,
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+    letterSpacing: -0.5,
   },
-  userEmail: {
-    fontSize: 16,
+  statusBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F3F4F6',
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 20,
+    marginBottom: 20,
+  },
+  statusText: {
+    fontSize: 13,
     color: '#6B7280',
-    marginBottom: 16,
+    marginLeft: 6,
+    fontWeight: '500',
+  },
+  statusTextActive: {
+    color: '#1FC25B',
   },
   loginButton: {
-    backgroundColor: '#10B981',
-    paddingHorizontal: 24,
-    paddingVertical: 12,
+    flexDirection: 'row',
+    backgroundColor: '#1FC25B',
+    paddingHorizontal: 32,
+    paddingVertical: 14,
     borderRadius: 12,
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#1FC25B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   loginButtonText: {
-    color: '#ffffff',
+    color: '#FFFFFF',
     fontSize: 16,
     fontWeight: '600',
+    marginLeft: 8,
   },
   section: {
-    marginBottom: 32,
-  },
-  sectionTitle: {
-    fontSize: 18,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    paddingHorizontal: 24,
     marginBottom: 16,
   },
+  sectionTitle: {
+    fontSize: 16,
+    fontWeight: '700',
+    color: '#374151',
+    paddingHorizontal: 24,
+    marginBottom: 12,
+    letterSpacing: 0.3,
+    textTransform: 'uppercase',
+  },
   sectionContent: {
-    backgroundColor: '#F9FAFB',
-    marginHorizontal: 24,
-    borderRadius: 12,
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    borderRadius: 16,
+    overflow: 'hidden',
+    elevation: 1,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.05,
+    shadowRadius: 2,
   },
   profileItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 18,
     borderBottomWidth: 1,
-    borderBottomColor: '#E5E7EB',
+    borderBottomColor: '#F3F4F6',
+  },
+  profileItemFirst: {
+    borderTopLeftRadius: 16,
+    borderTopRightRadius: 16,
   },
   itemLeft: {
     flexDirection: 'row',
     alignItems: 'center',
     flex: 1,
   },
+  iconContainer: {
+    width: 48,
+    height: 48,
+    borderRadius: 12,
+    backgroundColor: '#F9FAFB',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+  },
   itemText: {
-    marginLeft: 12,
     flex: 1,
   },
   itemLabel: {
     fontSize: 16,
-    fontWeight: '500',
-    color: '#1F2937',
-    marginBottom: 2,
+    fontWeight: '600',
+    color: '#111827',
+    marginBottom: 4,
   },
   itemValue: {
     fontSize: 14,
     color: '#6B7280',
+    fontWeight: '400',
   },
-  supportContainer: {
-    flex: 1,
-    paddingHorizontal: 24,
-    paddingTop: 24,
-  },
-  supportTitle: {
-    fontSize: 24,
-    fontWeight: 'bold',
-    color: '#1F2937',
-    marginBottom: 8,
-  },
-  supportSubtitle: {
-    fontSize: 16,
-    color: '#6B7280',
-    marginBottom: 32,
-    lineHeight: 24,
-  },
-  messageInput: {
-    borderWidth: 1,
-    borderColor: '#D1D5DB',
-    borderRadius: 12,
-    padding: 16,
-    fontSize: 16,
-    color: '#1F2937',
-    backgroundColor: '#F9FAFB',
-    minHeight: 120,
-    textAlignVertical: 'top',
-    marginBottom: 24,
-  },
-  sendButton: {
-    backgroundColor: '#10B981',
-    borderRadius: 12,
-    padding: 16,
-    alignItems: 'center',
-    marginBottom: 32,
-  },
-  sendButtonText: {
-    color: '#ffffff',
-    fontSize: 16,
-    fontWeight: '600',
-  },
-  contactInfo: {
-    backgroundColor: '#F3F4F6',
-    borderRadius: 12,
-    padding: 20,
-  },
-  contactTitle: {
-    fontSize: 16,
-    fontWeight: '600',
-    color: '#1F2937',
-    marginBottom: 16,
-    textAlign: 'center',
-  },
-  contactButton: {
+  addContainer: {
     flexDirection: 'row',
     alignItems: 'center',
-    justifyContent: 'center',
-    backgroundColor: '#ffffff',
-    borderRadius: 8,
-    padding: 12,
   },
-  contactButtonText: {
-    fontSize: 16,
-    color: '#10B981',
+  addText: {
+    fontSize: 14,
+    color: '#1FC25B',
+    marginLeft: 6,
     fontWeight: '500',
-    marginLeft: 8,
+  },
+  modalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+    justifyContent: 'flex-end',
+  },
+  modalContent: {
+    backgroundColor: '#FFFFFF',
+    borderTopLeftRadius: 24,
+    borderTopRightRadius: 24,
+    paddingHorizontal: 24,
+    paddingTop: 24,
+    paddingBottom: 40,
+  },
+  modalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 24,
+  },
+  modalTitle: {
+    fontSize: 22,
+    fontWeight: '700',
+    color: '#111827',
+  },
+  closeButton: {
+    padding: 4,
+  },
+  input: {
+    borderWidth: 2,
+    borderColor: '#E5E7EB',
+    borderRadius: 12,
+    padding: 16,
+    fontSize: 16,
+    color: '#111827',
+    backgroundColor: '#F9FAFB',
+    marginBottom: 24,
+    fontWeight: '500',
+  },
+  submitButton: {
+    backgroundColor: '#1FC25B',
+    borderRadius: 12,
+    padding: 18,
+    alignItems: 'center',
+    elevation: 3,
+    shadowColor: '#1FC25B',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+  },
+  submitButtonDisabled: {
+    backgroundColor: '#9CA3AF',
+  },
+  submitButtonText: {
+    color: '#FFFFFF',
+    fontSize: 16,
+    fontWeight: '700',
+    letterSpacing: 0.5,
   },
   appInfo: {
     alignItems: 'center',
-    paddingVertical: 32,
+    paddingVertical: 40,
     paddingHorizontal: 24,
+    backgroundColor: '#FFFFFF',
+    marginHorizontal: 16,
+    marginTop: 16,
+    marginBottom: 24,
+    borderRadius: 16,
+  },
+  logoContainer: {
+    width: 64,
+    height: 64,
+    borderRadius: 16,
+    backgroundColor: '#F0FDF4',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 16,
   },
   appTitle: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#10B981',
-    marginBottom: 4,
-  },
-  appVersion: {
-    fontSize: 14,
-    color: '#6B7280',
+    fontSize: 24,
+    fontWeight: '700',
+    color: '#1FC25B',
     marginBottom: 8,
+    letterSpacing: 0.5,
   },
   appDescription: {
     fontSize: 14,
     color: '#6B7280',
     textAlign: 'center',
+    marginBottom: 20,
+  },
+  appBadges: {
+    flexDirection: 'row',
+    gap: 12,
+  },
+  badge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#F9FAFB',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: '#F3F4F6',
+  },
+  badgeText: {
+    fontSize: 12,
+    color: '#6B7280',
+    marginLeft: 6,
+    fontWeight: '600',
+  },
+  /* Logout modal styles */
+  logoutModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(0,0,0,0.45)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    paddingHorizontal: 24,
+  },
+  logoutModalContent: {
+    width: '100%',
+    backgroundColor: '#FFFFFF',
+    borderRadius: 16,
+    padding: 20,
+    alignItems: 'center',
+    elevation: 6,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 6 },
+    shadowOpacity: 0.12,
+    shadowRadius: 12,
+  },
+  logoutModalTitle: {
+    fontSize: 20,
+    fontWeight: '700',
+    color: '#111827',
+    marginBottom: 8,
+  },
+  logoutModalText: {
+    fontSize: 15,
+    color: '#6B7280',
+    textAlign: 'center',
+    marginBottom: 18,
+  },
+  logoutButtons: {
+    flexDirection: 'row',
+    width: '100%',
+    justifyContent: 'space-between',
+    paddingHorizontal: 16,
+  },
+  logoutCancelButton: {
+    width: '48%',
+    backgroundColor: '#1FC25B',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  logoutButton: {
+    width: '48%',
+    backgroundColor: '#FACC14',
+    opacity: 0.6, // as requested: 60% opacity
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
+  },
+  logoutIconButton: {
+    width: '15%',
+    backgroundColor: '#FACC14',
+    paddingVertical: 14,
+    borderRadius: 12,
+    alignItems: 'center',
   },
 });

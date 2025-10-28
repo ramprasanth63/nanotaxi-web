@@ -2,7 +2,7 @@
   "expo": {
     "name": "NanoTaxi",
     "slug": "NanoTaxi",
-    "version": "1.0.0",
+    "version": "2.0.0",
     "orientation": "portrait",
     "icon": "./assets/images/icon.png",
     "scheme": "NanoTaxi",
@@ -17,7 +17,7 @@
         "backgroundColor": "#ffffff"
       },
       "edgeToEdgeEnabled": true,
-      "package": "com.gokulrajalp.NanoTaxi"
+      "package": "com.nanotaxibooking.nanotaxi"
     },
     "web": {
       "bundler": "metro",

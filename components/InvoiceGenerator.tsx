@@ -56,13 +56,15 @@ const getLogoBase64 = async () => {
   return 'https://www.nanotaxibooking.com/NaNoLogo.png';
 };
 
-  const generatePackageInvoiceHTML = () => {
+
+  const generatePackageInvoiceHTML = async() => {
     const invoiceNumber = generateInvoiceNumber();
     const currentDate = new Date().toLocaleDateString('en-IN');
     const tripDate = formatDate(booking.date_of_travel);
     const totalAmount = booking.pending_payment || booking.total_amount || 0;
     const advancePaid = booking.advanced_payment || 0;
     const balance = totalAmount - advancePaid;
+    const logoBase64 = await getLogoBase64();
 
     const pickupTimeSection = booking.pickup_time ? `
       <div class="detail-item">
@@ -80,6 +82,9 @@ const getLogoBase64 = async () => {
       <tr>
         <td>Base Package Amount</td>
         <td style="text-align: right;">₹${booking.base_amount}</td>
+      </tr> <tr>
+        <td>GST</td>
+        <td style="text-align: right;">₹100</td>
       </tr>` : '';
 
     const tollRow = booking.toll_amount > 0 ? `
@@ -114,6 +119,24 @@ const getLogoBase64 = async () => {
             color: #2d3748; 
             font-size: 14px;
             line-height: 1.6;
+        }
+            .payment-section {
+            margin: 0 30px 25px;
+            background: linear-gradient(135deg, #FFC627 0%, #09613F 100%);
+            border-radius: 12px;
+            padding: 20px;
+            text-align: center;
+        }
+        .payment-label {
+            font-size: 12px;
+            color: rgba(255,255,255,0.9);
+            text-transform: uppercase;
+            margin-bottom: 5px;
+        }
+        .payment-amount {
+            font-size: 28px;
+            font-weight: 700;
+            color: white;
         }
         .invoice-wrapper {
             max-width: 800px;
@@ -379,27 +402,12 @@ const getLogoBase64 = async () => {
                 ${pickupTimeSection}
             </div>
         </div>
-        <div class="cost-breakdown">
-            <div class="cost-title">💰 Cost Breakdown</div>
-            <table class="cost-table">
-                <thead>
-                    <tr>
-                        <th>Description</th>
-                        <th style="text-align: right;">Amount (₹)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    ${baseAmountRow}
-                    ${tollRow}
-                    ${parkingRow}
-                    ${nightHaltRow}
-                    <tr class="total-row">
-                        <td><strong>Total Amount</strong></td>
-                        <td style="text-align: right;"><strong>₹${totalAmount}</strong></td>
-                    </tr>
-                </tbody>
-            </table>
+       
+        <div class="payment-section">
+            <div class="payment-label">Total Fare</div>
+            <div class="payment-amount">₹${totalAmount}</div>
         </div>
+
         <div class="footer">
             <p><strong>NANO TAXI BOOKING</strong></p>
             <p>Thank you for choosing our premium transportation services!</p>

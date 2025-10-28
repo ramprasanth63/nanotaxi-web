@@ -1,4 +1,4 @@
-package com.gokulrajalp.NanoTaxi
+package com.nanotaxibooking.nanotaxi
 
 import android.app.Application
 import android.content.res.Configuration
