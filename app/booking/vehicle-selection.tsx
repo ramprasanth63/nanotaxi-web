@@ -1,5 +1,5 @@
 import TaxiLoading from '@/components/TaxiLoading';
-import { apiGet, apiPost, fetchBaseURL } from '@/services/apiClient';
+import { apiGet, apiPost } from '@/services/apiClient';
 import { Location, Vehicle } from '@/types';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import { useLocalSearchParams, useRouter } from 'expo-router';
@@ -79,12 +79,7 @@ export default function VehicleSelectionScreen() {
           end_point: endLocation.name,
         }
       );
-      const baseurl = await fetchBaseURL();
-      const vehiclesWithImages = response.data.available_vehicles.map((vehicle: Vehicle) => ({
-        ...vehicle,
-        image: `${baseurl}${vehicle.image}`,
-      }));
-      setVehicles(vehiclesWithImages);
+      setVehicles(response.data.available_vehicles);
     } catch (error) {
       const mockVehicles: Vehicle[] = [
         {
