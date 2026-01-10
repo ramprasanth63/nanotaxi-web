@@ -1,4 +1,5 @@
 import { useAuth } from '@/contexts/AuthContext';
+import { useLanguage } from '@/contexts/LanguageContext'; 
 import { apiGet, apiPut } from '@/services/apiClient';
 import { useRouter } from 'expo-router';
 import React, { useEffect, useState } from 'react';
@@ -19,6 +20,7 @@ import MaterialCommunityIcons from 'react-native-vector-icons/MaterialCommunityI
 export default function ProfileScreen() {
   const router = useRouter();
   const { user, isLoggedIn, logout } = useAuth();
+  const { lang } = useLanguage(); // Get current language
   const [showSupport, setShowSupport] = useState(false);
   const [supportMessage, setSupportMessage] = useState('');
   const [showEmailModal, setShowEmailModal] = useState(false);
@@ -50,13 +52,19 @@ export default function ProfileScreen() {
 
   const handleUpdateEmail = async () => {
     if (!emailInput.trim()) {
-      Alert.alert('Error', 'Please enter a valid email address');
+      Alert.alert(
+        lang === 'en' ? 'Error' : 'பிழை',
+        lang === 'en' ? 'Please enter a valid email address' : 'சரியான மின்னஞ்சல் முகவரியை உள்ளிடவும்'
+      );
       return;
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(emailInput)) {
-      Alert.alert('Error', 'Please enter a valid email format');
+      Alert.alert(
+        lang === 'en' ? 'Error' : 'பிழை',
+        lang === 'en' ? 'Please enter a valid email format' : 'சரியான மின்னஞ்சல் வடிவத்தை உள்ளிடவும்'
+      );
       return;
     }
 
@@ -70,10 +78,16 @@ export default function ProfileScreen() {
         await fetchCustomerDetails();
         setShowEmailModal(false);
         setEmailInput('');
-        Alert.alert('Success', 'Email updated successfully!');
+        Alert.alert(
+          lang === 'en' ? 'Success' : 'வெற்றி',
+          lang === 'en' ? 'Email updated successfully!' : 'மின்னஞ்சல் வெற்றிகரமாக புதுப்பிக்கப்பட்டது!'
+        );
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update email. Please try again.');
+      Alert.alert(
+        lang === 'en' ? 'Error' : 'பிழை',
+        lang === 'en' ? 'Failed to update email. Please try again.' : 'மின்னஞ்சலை புதுப்பிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.'
+      );
     } finally {
       setIsLoading(false);
     }
@@ -81,7 +95,10 @@ export default function ProfileScreen() {
 
   const handleUpdatePhone = async () => {
     if (!phoneInput.trim()) {
-      Alert.alert('Error', 'Please enter a valid phone number');
+      Alert.alert(
+        lang === 'en' ? 'Error' : 'பிழை',
+        lang === 'en' ? 'Please enter a valid phone number' : 'சரியான தொலைபேசி எண்ணை உள்ளிடவும்'
+      );
       return;
     }
 
@@ -91,7 +108,10 @@ export default function ProfileScreen() {
     }
 
     if (formattedPhone.length !== 13) {
-      Alert.alert('Error', 'Please enter a valid 10-digit phone number');
+      Alert.alert(
+        lang === 'en' ? 'Error' : 'பிழை',
+        lang === 'en' ? 'Please enter a valid 10-digit phone number' : 'சரியான 10-இலக்க தொலைபேசி எண்ணை உள்ளிடவும்'
+      );
       return;
     }
 
@@ -105,17 +125,22 @@ export default function ProfileScreen() {
         await fetchCustomerDetails();
         setShowPhoneModal(false);
         setPhoneInput('');
-        Alert.alert('Success', 'Phone number updated successfully!');
+        Alert.alert(
+          lang === 'en' ? 'Success' : 'வெற்றி',
+          lang === 'en' ? 'Phone number updated successfully!' : 'தொலைபேசி எண் வெற்றிகரமாக புதுப்பிக்கப்பட்டது!'
+        );
       }
     } catch (error) {
-      Alert.alert('Error', 'Failed to update phone number. Please try again.');
+      Alert.alert(
+        lang === 'en' ? 'Error' : 'பிழை',
+        lang === 'en' ? 'Failed to update phone number. Please try again.' : 'தொலைபேசி எண்ணை புதுப்பிக்க முடியவில்லை. மீண்டும் முயற்சிக்கவும்.'
+      );
     } finally {
       setIsLoading(false);
     }
   };
 
   const handleLogout = () => {
-    // open custom logout modal
     setShowLogoutModal(true);
   };
 
@@ -135,12 +160,17 @@ export default function ProfileScreen() {
 
   const handleSupportCall = () => {
     Alert.alert(
-      'Call Support',
-      'Call our support team at +91 9840407707?',
+      lang === 'en' ? 'Call Support' : 'ஆதரவை தொடர்பு கொள்ள',
+      lang === 'en' 
+        ? 'Call our support team at +91 9840407707?' 
+        : 'எங்கள் ஆதரவு குழுவை +91 9840407707 இல் தொடர்பு கொள்ளவா?',
       [
-        { text: 'Cancel', style: 'cancel' },
         { 
-          text: 'Call', 
+          text: lang === 'en' ? 'Cancel' : 'ரத்து', 
+          style: 'cancel' 
+        },
+        { 
+          text: lang === 'en' ? 'Call' : 'அழைக்க', 
           onPress: () => Linking.openURL('tel:+919840407707') 
         },
       ]
@@ -148,9 +178,8 @@ export default function ProfileScreen() {
   };
 
   const getEmailValue = () => {
-    if (!isLoggedIn) return 'Not logged in';
+    if (!isLoggedIn) return lang === 'en' ? 'Not logged in' : 'உள்நுழையவில்லை';
     
-    // Priority: email field > contact (if not phone)
     if (customerData?.email) return customerData.email;
     if (customerData?.contact && !customerData.contact.startsWith('+91')) {
       return customerData.contact;
@@ -159,9 +188,8 @@ export default function ProfileScreen() {
   };
 
   const getPhoneValue = () => {
-    if (!isLoggedIn) return 'Not logged in';
+    if (!isLoggedIn) return lang === 'en' ? 'Not logged in' : 'உள்நுழையவில்லை';
     
-    // Priority: phone_number field > contact (if phone)
     if (customerData?.phone_number) return customerData.phone_number;
     if (customerData?.contact && customerData.contact.startsWith('+91')) {
       return customerData.contact;
@@ -171,11 +199,11 @@ export default function ProfileScreen() {
 
   const profileSections = [
     {
-      title: 'Account Information',
+      title: lang === 'en' ? 'Account Information' : 'கணக்கு தகவல்',
       items: [
         {
           icon: <MaterialCommunityIcons name="email-outline" size={24} color="#1FC25B" />,
-          label: 'Email',
+          label: lang === 'en' ? 'Email' : 'மின்னஞ்சல்',
           value: getEmailValue(),
           onPress: () => {
             if (isLoggedIn) {
@@ -187,7 +215,7 @@ export default function ProfileScreen() {
         },
         {
           icon: <MaterialCommunityIcons name="phone-outline" size={24} color="#FACC14" />,
-          label: 'Phone',
+          label: lang === 'en' ? 'Phone' : 'தொலைபேசி',
           value: getPhoneValue(),
           onPress: () => {
             if (isLoggedIn) {
@@ -200,11 +228,11 @@ export default function ProfileScreen() {
       ],
     },
     {
-      title: 'Support & Help',
+      title: lang === 'en' ? 'Support & Help' : 'ஆதரவு மற்றும் உதவி',
       items: [
         {
           icon: <MaterialCommunityIcons name="headset" size={24} color="#1FC25B" />,
-          label: 'Customer Support',
+          label: lang === 'en' ? 'Customer Support' : 'வாடிக்கையாளர் ஆதரவு',
           value: '+91 9840407707',
           onPress: handleSupportCall,
           showAdd: false,
@@ -229,7 +257,9 @@ export default function ProfileScreen() {
           {item.showAdd ? (
             <View style={styles.addContainer}>
               <MaterialCommunityIcons name="plus-circle" size={16} color="#1FC25B" />
-              <Text style={styles.addText}>Tap to add {item.label.toLowerCase()}</Text>
+              <Text style={styles.addText}>
+                {lang === 'en' ? `Tap to add ${item.label.toLowerCase()}` : `சேர்க்க கிளிக் செய்யவும்`}
+              </Text>
             </View>
           ) : (
             <Text style={styles.itemValue} numberOfLines={1}>{item.value}</Text>
@@ -283,7 +313,10 @@ export default function ProfileScreen() {
             activeOpacity={0.8}
           >
             <Text style={styles.submitButtonText}>
-              {isLoading ? 'Updating...' : 'Submit'}
+              {isLoading 
+                ? (lang === 'en' ? 'Updating...' : 'புதுப்பிக்கிறது...') 
+                : (lang === 'en' ? 'Submit' : 'சமர்ப்பிக்கவும்')
+              }
             </Text>
           </TouchableOpacity>
         </View>
@@ -294,7 +327,9 @@ export default function ProfileScreen() {
   return (
     <SafeAreaView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Profile</Text>
+        <Text style={styles.headerTitle}>
+          {lang === 'en' ? 'Profile' : 'சுயவிவரம்'}
+        </Text>
         {isLoggedIn && (
           <TouchableOpacity onPress={handleLogout} style={styles.logoutIconButton}>
             <MaterialCommunityIcons name="logout-variant" size={24} color="#EF4444" />
@@ -311,7 +346,10 @@ export default function ProfileScreen() {
             </View>
           </View>
           <Text style={styles.userName}>
-            {isLoggedIn ? (customerData?.contact || user?.username || 'User') : 'Guest User'}
+            {isLoggedIn 
+              ? (customerData?.contact || user?.username || (lang === 'en' ? 'User' : 'பயனர்')) 
+              : (lang === 'en' ? 'Guest User' : 'விருந்தினர் பயனர்')
+            }
           </Text>
           <View style={styles.statusBadge}>
             <MaterialCommunityIcons 
@@ -320,7 +358,10 @@ export default function ProfileScreen() {
               color={isLoggedIn ? "#1FC25B" : "#9CA3AF"} 
             />
             <Text style={[styles.statusText, isLoggedIn && styles.statusTextActive]}>
-              {isLoggedIn ? 'Active Account' : 'Not logged in'}
+              {isLoggedIn 
+                ? (lang === 'en' ? 'Active Account' : 'செயலில் உள்ள கணக்கு')
+                : (lang === 'en' ? 'Not logged in' : 'உள்நுழையவில்லை')
+              }
             </Text>
           </View>
           {!isLoggedIn && (
@@ -330,7 +371,9 @@ export default function ProfileScreen() {
               activeOpacity={0.8}
             >
               <MaterialCommunityIcons name="login" size={20} color="#FFFFFF" />
-              <Text style={styles.loginButtonText}>Login to Continue</Text>
+              <Text style={styles.loginButtonText}>
+                {lang === 'en' ? 'Login to Continue' : 'தொடர உள்நுழையவும்'}
+              </Text>
             </TouchableOpacity>
           )}
         </View>
@@ -350,20 +393,29 @@ export default function ProfileScreen() {
           </View>
           <Text style={styles.appTitle}>NANO Taxi</Text>
           <Text style={styles.appDescription}>
-            Your reliable ride booking companion
+            {lang === 'en' 
+              ? 'Your reliable ride booking companion' 
+              : 'உங்கள் நம்பகமான பயண பதிவு துணை'
+            }
           </Text>
           <View style={styles.appBadges}>
             <View style={styles.badge}>
               <MaterialCommunityIcons name="shield-check" size={14} color="#1FC25B" />
-              <Text style={styles.badgeText}>Secure</Text>
+              <Text style={styles.badgeText}>
+                {lang === 'en' ? 'Secure' : 'பாதுகாப்பானது'}
+              </Text>
             </View>
             <View style={styles.badge}>
               <MaterialCommunityIcons name="clock-fast" size={14} color="#FACC14" />
-              <Text style={styles.badgeText}>Fast</Text>
+              <Text style={styles.badgeText}>
+                {lang === 'en' ? 'Fast' : 'வேகமானது'}
+              </Text>
             </View>
             <View style={styles.badge}>
               <MaterialCommunityIcons name="star" size={14} color="#FACC14" />
-              <Text style={styles.badgeText}>Reliable</Text>
+              <Text style={styles.badgeText}>
+                {lang === 'en' ? 'Reliable' : 'நம்பகமானது'}
+              </Text>
             </View>
           </View>
         </View>
@@ -372,22 +424,22 @@ export default function ProfileScreen() {
       {renderModal(
         showEmailModal,
         () => setShowEmailModal(false),
-        'Update Email',
+        lang === 'en' ? 'Update Email' : 'மின்னஞ்சலை புதுப்பிக்கவும்',
         emailInput,
         setEmailInput,
         handleUpdateEmail,
-        'Enter your email address',
+        lang === 'en' ? 'Enter your email address' : 'உங்கள் மின்னஞ்சல் முகவரியை உள்ளிடவும்',
         'email-address'
       )}
 
       {renderModal(
         showPhoneModal,
         () => setShowPhoneModal(false),
-        'Update Phone Number',
+        lang === 'en' ? 'Update Phone Number' : 'தொலைபேசி எண்ணை புதுப்பிக்கவும்',
         phoneInput,
         setPhoneInput,
         handleUpdatePhone,
-        'Enter 10-digit phone number',
+        lang === 'en' ? 'Enter 10-digit phone number' : '10-இலக்க தொலைபேசி எண்ணை உள்ளிடவும்',
         'phone-pad'
       )}
 
@@ -400,8 +452,15 @@ export default function ProfileScreen() {
       >
         <View style={styles.logoutModalOverlay}>
           <View style={styles.logoutModalContent}>
-            <Text style={styles.logoutModalTitle}>Confirm Logout</Text>
-            <Text style={styles.logoutModalText}>Are you sure you want to logout?</Text>
+            <Text style={styles.logoutModalTitle}>
+              {lang === 'en' ? 'Confirm Logout' : 'வெளியேற உறுதிப்படுத்தவும்'}
+            </Text>
+            <Text style={styles.logoutModalText}>
+              {lang === 'en' 
+                ? 'Are you sure you want to logout?' 
+                : 'நீங்கள் வெளியேற விரும்புகிறீர்களா?'
+              }
+            </Text>
 
             <View style={styles.logoutButtons}>
               <TouchableOpacity
@@ -410,7 +469,9 @@ export default function ProfileScreen() {
                 disabled={isLoggingOut}
                 activeOpacity={0.8}
               >
-                <Text style={styles.logoutCancelButtonText}>Cancel</Text>
+                <Text style={styles.logoutCancelButtonText}>
+                  {lang === 'en' ? 'Cancel' : 'ரத்து'}
+                </Text>
               </TouchableOpacity>
 
               <TouchableOpacity
@@ -420,7 +481,10 @@ export default function ProfileScreen() {
                 activeOpacity={0.8}
               >
                 <Text style={styles.logoutButtonText}>
-                  {isLoggingOut ? 'Logging out...' : 'Logout'}
+                  {isLoggingOut 
+                    ? (lang === 'en' ? 'Logging out...' : 'வெளியேறுகிறது...') 
+                    : (lang === 'en' ? 'Logout' : 'வெளியேறு')
+                  }
                 </Text>
               </TouchableOpacity>
             </View>
@@ -723,7 +787,6 @@ const styles = StyleSheet.create({
     marginLeft: 6,
     fontWeight: '600',
   },
-  /* Logout modal styles */
   logoutModalOverlay: {
     flex: 1,
     backgroundColor: 'rgba(0,0,0,0.45)',
@@ -771,7 +834,7 @@ const styles = StyleSheet.create({
   logoutButton: {
     width: '48%',
     backgroundColor: '#FACC14',
-    opacity: 0.6, // as requested: 60% opacity
+    opacity: 0.6,
     paddingVertical: 14,
     borderRadius: 12,
     alignItems: 'center',
