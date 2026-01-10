@@ -1,4 +1,3 @@
-// File: app/(tabs)/index.tsx
 import React from 'react';
 import { useAuth } from '@/contexts/AuthContext';
 import { useLanguage } from '@/contexts/LanguageContext';
